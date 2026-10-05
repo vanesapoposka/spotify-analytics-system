@@ -7,12 +7,12 @@ scripts already built and proven to work standalone in this project, so
 `airflow dags test` genuinely orchestrates the real pipeline end-to-end
 rather than calling illustrative placeholder commands.
 """
+
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 import os
 
-# Point this at wherever you copied this project's folder on the Airflow host.
 PROJECT = os.getenv("SPOTIFY_DWH_PROJECT_DIR", "/opt/spotify_dwh")
 
 default_args = {
@@ -23,10 +23,8 @@ default_args = {
 
 with DAG(
     dag_id="spotify_dwh_daily",
-    description="Manual full rebuild: star schema, synthetic events, OLAP, and ML refresh",
+    description="Manual full rebuild: star schema, CSV listening stats, OLAP, and ML refresh",
     default_args=default_args,
-    # The first task runs 01_star_schema.sql, which drops dwh with CASCADE.
-    # Keep this full-rebuild DAG manual-only so it cannot erase the warehouse daily.
     schedule_interval=None,
     start_date=datetime(2024, 1, 1),
     catchup=False,
@@ -47,8 +45,8 @@ with DAG(
     )
 
     load_events = BashOperator(
-        task_id="load_daily_listening_events",
-        bash_command=f"python3 {PROJECT}/etl/generate_events.py",
+        task_id="load_listening_stats_csv",
+        bash_command=f"python3 {PROJECT}/etl/load_listening_stats.py",
     )
 
     derive_weighted_metrics = BashOperator(

@@ -1,16 +1,11 @@
-"""
-Incremental ETL pipeline: Spotify catalog (source) -> dwh star schema (target)
+"""Load catalog dimensions and the artist bridge into the warehouse.
 
-Simulates a realistic daily load pattern:
-  1. Catalog dimension load (songs/artists/albums/genres) split into N
-     incremental "arrival" batches -> DQ layer -> SCD2 upsert into dims.
-  2. Synthetic daily listening-event generation for a rolling 60-day window,
-     biased by each song's real popularity + audio-feature profile, loaded
-     incrementally one day at a time into fact_stream.
-  3. Post-load derivation of fact_song_artist_daily (weighted vs unweighted).
+Listening statistics are loaded separately from
+data/spotify_listening_stats.csv by etl/load_listening_stats.py.
 
-Run: python load_dwh.py
+Run: python etl/load_dwh.py
 """
+
 import sys, os, hashlib, uuid, random
 import pandas as pd
 import numpy as np
@@ -29,7 +24,6 @@ USER_TRACKED_COLS = ["subscription_tier","user_segment"]
 
 random.seed(42); np.random.seed(42)
 
-# ---------------------------------------------------------------------------
 def build_dim_date(engine, start="2018-01-01", end="2020-12-31"):
     dates = pd.date_range(start, end, freq="D")
     df = pd.DataFrame({"full_date": dates})
@@ -46,9 +40,7 @@ def build_dim_date(engine, start="2018-01-01", end="2020-12-31"):
     df.to_sql("dim_date", engine, schema="dwh", if_exists="append", index=False)
     print(f"[dim_date] loaded {len(df)} rows")
 
-# ---------------------------------------------------------------------------
 def mood_from_audio(row):
-    """Simple rule-based mood label (stand-in ground truth; refined later by ML clustering)."""
     v, e = row["valence"], row["energy"]
     if v >= 0.5 and e >= 0.5: return "Happy/Energetic"
     if v >= 0.5 and e < 0.5:  return "Calm/Positive"
@@ -62,20 +54,12 @@ def popularity_tier(pop):
     return "Emerging"
 
 def followers_bucket(pop):
-    # proxy since dataset has no real follower counts
     if pop >= 80: return "10M+"
     if pop >= 60: return "1M-10M"
     if pop >= 35: return "100K-1M"
     return "<100K"
 
-# ---------------------------------------------------------------------------
 def scd2_upsert(engine, table, business_key_col, staging_df, tracked_cols, as_of_date):
-    """
-    Generic SCD Type 2 merge:
-      - new business key -> INSERT version 1
-      - existing key, tracked attrs changed -> expire current row, INSERT new version
-      - existing key, no change -> no-op
-    """
     with engine.begin() as conn:
         current = pd.read_sql(
             text(f"SELECT * FROM dwh.{table} WHERE is_current = TRUE"), conn)
@@ -99,10 +83,10 @@ def scd2_upsert(engine, table, business_key_col, staging_df, tracked_cols, as_of
     for _, r in staging_df.iterrows():
         bk = r[business_key_col]
         if bk not in cur_hash_map:
-            new_rows.append(r)  # brand new entity
+            new_rows.append(r)
         elif cur_hash_map[bk] != r["row_hash"]:
             changed_keys.append(bk)
-            new_rows.append(r)  # changed entity -> new version
+            new_rows.append(r)
 
     if changed_keys:
         with engine.begin() as conn:
@@ -121,7 +105,6 @@ def scd2_upsert(engine, table, business_key_col, staging_df, tracked_cols, as_of
 
     return len(new_rows) - len(changed_keys), len(changed_keys), len(new_rows)
 
-# ---------------------------------------------------------------------------
 def load_catalog_incrementally(n_batches=5):
     raw = pd.read_csv(RAW_CSV)
     idx_to_batch = {}
@@ -142,7 +125,7 @@ def load_catalog_incrementally(n_batches=5):
 
         as_of = pd.Timestamp("2018-01-01") + pd.Timedelta(days=b)  # simulate arrival day
 
-        # ---- DIM_GENRE (Type 1) ----
+        # DIM_GENRE (Type 1)
         g = clean[["playlist_genre", "playlist_subgenre"]].drop_duplicates()
         g["genre_bk"] = g["playlist_genre"] + "|" + g["playlist_subgenre"]
         with ENGINE.begin() as conn:
@@ -151,7 +134,7 @@ def load_catalog_incrementally(n_batches=5):
         if len(g_new):
             g_new.to_sql("dim_genre", ENGINE, schema="dwh", if_exists="append", index=False)
 
-        # ---- DIM_ALBUM (Type 1) ----
+        # DIM_ALBUM (Type 1)
         alb = clean[["track_album_id", "track_album_name", "track_album_release_date"]].drop_duplicates("track_album_id")
         alb = alb.rename(columns={"track_album_id": "album_bk", "track_album_name": "album_name",
                                    "track_album_release_date": "release_date"})
@@ -161,7 +144,7 @@ def load_catalog_incrementally(n_batches=5):
         if len(alb_new):
             alb_new.to_sql("dim_album", ENGINE, schema="dwh", if_exists="append", index=False)
 
-        # ---- DIM_ARTIST (Type 2) — explode many-to-many artist credits ----
+        # DIM_ARTIST (Type 2) — explode many-to-many artist credits
         artist_rows = []
         for _, r in clean.iterrows():
             for name in split_artists(r["track_artist"]):
@@ -172,7 +155,6 @@ def load_catalog_incrementally(n_batches=5):
         art_df = pd.DataFrame(artist_rows).drop_duplicates("artist_bk")
         n_new, n_chg, n_tot = scd2_upsert(ENGINE, "dim_artist", "artist_bk", art_df, ARTIST_TRACKED_COLS, as_of)
 
-        # ---- DIM_SONG (Type 2) ----
         song_df = clean.copy()
         song_df["mood_label"] = song_df.apply(mood_from_audio, axis=1)
         song_df = song_df.rename(columns={"track_id": "song_bk", "track_name": "track_name",
@@ -201,7 +183,6 @@ def load_catalog_incrementally(n_batches=5):
 
     print(f"\nCATALOG LOAD TOTAL: read={total_read} rejected={total_rejected} loaded={total_loaded}")
 
-# ---------------------------------------------------------------------------
 def build_bridge_song_artist():
     raw = pd.read_csv(RAW_CSV)[["track_id", "track_artist"]].drop_duplicates("track_id")
     with ENGINE.begin() as conn:
@@ -226,16 +207,12 @@ def build_bridge_song_artist():
             rows.append({"song_sk": song_sk, "artist_sk": a_sk, "artist_seq": seq, "weighting_factor": w})
 
     bridge = pd.DataFrame(rows).drop_duplicates(subset=["song_sk", "artist_sk"])
-    # This is a derived mapping, so rebuild it on every catalog load. Keep the
-    # delete and insert in one transaction so a failed write preserves the
-    # previous bridge rather than leaving it empty or partially refreshed.
     with ENGINE.begin() as conn:
         conn.execute(text("DELETE FROM dwh.bridge_song_artist"))
         bridge.to_sql("bridge_song_artist", conn, schema="dwh", if_exists="append", index=False)
     n_collabs = (bridge.groupby("song_sk").size() > 1).sum()
     print(f"[bridge_song_artist] loaded {len(bridge)} links ({n_collabs} multi-artist collabs)")
 
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     with ENGINE.begin() as conn:
         conn.execute(text("TRUNCATE dwh.dim_date CASCADE"))

@@ -16,7 +16,6 @@ button,select{font:inherit}
 .app-shell{height:100vh;min-height:600px;display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:minmax(0,1fr) 90px;gap:8px;padding:8px;}
 .sidebar{grid-row:1;grid-column:1;display:flex;flex-direction:column;gap:8px;min-height:0;}
 .side-block{background:var(--surface);border-radius:8px;padding:18px 16px;}
-.logged-out .analytics-nav,.logged-out .analytics-card{display:none}.logged-out #warehouseAnalytics{display:none!important}
 .brand{display:flex;align-items:center;gap:9px;color:#fff;font-size:20px;font-weight:700;letter-spacing:-.7px;margin:0 0 20px;}
 .brand-mark{width:27px;height:27px;border-radius:50%;background:var(--accent);color:#000;display:grid;place-items:center;font-weight:900;font-size:18px;}
 .nav-list{display:grid;gap:10px;}
@@ -51,11 +50,12 @@ select option{background:#242424;color:#fff}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 20px}
 .kpi{background:linear-gradient(135deg,#232323,#181818);border-radius:8px;padding:18px 20px;min-height:100px;}
 .kpi .val{font-size:27px;line-height:1.2;font-weight:800;color:#fff;letter-spacing:-.7px}.kpi .lbl{font-size:12px;color:var(--muted);margin-top:7px;}
-.grid,.ml-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.ml-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.ml-wide{grid-column:1/-1}
 .card{background:#181818;border:0;border-radius:8px;padding:19px 20px 16px;overflow:hidden;min-width:0;transition:background .18s ease;}
 .card:hover{background:#202020}.card h3{margin:0 0 16px;font-size:16px;color:#fff;font-weight:700;letter-spacing:-.2px;}
 .chart-wrap{height:260px;position:relative}.chart-wrap canvas{max-width:100%;max-height:100%;}
-.ml-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0 16px}
 .ml-status{color:var(--muted);font-size:12px;min-height:1.2em;margin:8px 0}
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -68,8 +68,8 @@ tbody tr:hover{background:#ffffff0a}.empty-state{color:var(--muted);line-height:
 .player-center{display:grid;gap:7px;justify-items:center}.player-controls{display:flex;align-items:center;gap:20px;color:var(--muted);font-size:14px}.player-controls .play{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#fff;color:#000;font-size:13px;}
 .progress-row{width:min(100%,480px);display:flex;align-items:center;gap:8px;color:var(--muted);font-size:10px}.progress{height:4px;border-radius:9px;background:#4d4d4d;flex:1;overflow:hidden}.progress span{display:block;width:37%;height:100%;background:#fff;border-radius:inherit;}
 .player-extra{display:flex;justify-content:flex-end;align-items:center;gap:12px;color:var(--muted);font-size:15px}.volume{width:90px;height:4px;background:#555;border-radius:8px;overflow:hidden}.volume span{display:block;width:65%;height:100%;background:#fff}
-@media(max-width:1050px){.app-shell{grid-template-columns:200px minmax(0,1fr)}.content{padding:20px}.hero-art{width:155px;height:155px}.hero{min-height:190px}.kpis,.ml-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.player{grid-template-columns:1fr 1.2fr .7fr}.recommendation-grid{grid-template-columns:1fr 1fr}.recommendation-panel:first-child{grid-column:1/-1}}
-@media(max-width:720px){.app-shell{height:auto;min-height:100vh;display:flex;flex-direction:column;padding:0;gap:0}.sidebar{display:none}.main-view{height:calc(100vh - 78px);border-radius:0}.topbar{height:58px;padding:0 12px}.history{display:none}.auth-area{width:100%;justify-content:flex-end}.login-form{width:100%;justify-content:flex-end;gap:5px}.login-form input{width:min(31vw,126px);padding:8px 9px}.login-form button,.logout-button{padding:8px 11px}.content{padding:18px 16px 40px}.hero{min-height:0;align-items:center;gap:16px;padding:12px 0 24px}.hero-art{width:104px;height:104px}.hero-art svg{width:52px;height:52px}.hero h1{font-size:34px;letter-spacing:-1.5px}.hero-meta{font-size:11px;margin-top:8px}.section-toolbar{align-items:flex-start;flex-direction:column}.refresh-note{display:none}.grid,.ml-grid{grid-template-columns:1fr}.chart-wrap{height:230px}.kpis,.ml-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kpi{padding:14px;min-height:84px}.kpi .val{font-size:22px}.recommendation-grid{grid-template-columns:1fr}.recommendation-panel:first-child{grid-column:auto}.personal-heading{align-items:flex-start;flex-direction:column}.player{position:fixed;z-index:10;bottom:0;left:0;right:0;height:78px;grid-template-columns:1fr auto;padding:0 12px;background:#111;border-top:1px solid #ffffff12}.mini-art{width:46px;height:46px}.player-center{display:none}.player-extra{gap:8px}.volume,.player-extra .hide-mobile{display:none}}
+@media(max-width:1050px){.app-shell{grid-template-columns:200px minmax(0,1fr)}.content{padding:20px}.hero-art{width:155px;height:155px}.hero{min-height:190px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.player{grid-template-columns:1fr 1.2fr .7fr}.recommendation-grid{grid-template-columns:1fr 1fr}.recommendation-panel:first-child{grid-column:1/-1}}
+@media(max-width:720px){.app-shell{height:auto;min-height:100vh;display:flex;flex-direction:column;padding:0;gap:0}.sidebar{display:none}.main-view{height:calc(100vh - 78px);border-radius:0}.topbar{height:58px;padding:0 12px}.history{display:none}.auth-area{width:100%;justify-content:flex-end}.login-form{width:100%;justify-content:flex-end;gap:5px}.login-form input{width:min(31vw,126px);padding:8px 9px}.login-form button,.logout-button{padding:8px 11px}.content{padding:18px 16px 40px}.hero{min-height:0;align-items:center;gap:16px;padding:12px 0 24px}.hero-art{width:104px;height:104px}.hero-art svg{width:52px;height:52px}.hero h1{font-size:34px;letter-spacing:-1.5px}.hero-meta{font-size:11px;margin-top:8px}.section-toolbar{align-items:flex-start;flex-direction:column}.refresh-note{display:none}.grid,.ml-grid{grid-template-columns:1fr}.chart-wrap{height:230px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kpi{padding:14px;min-height:84px}.kpi .val{font-size:22px}.recommendation-grid{grid-template-columns:1fr}.recommendation-panel:first-child{grid-column:auto}.personal-heading{align-items:flex-start;flex-direction:column}.player{position:fixed;z-index:10;bottom:0;left:0;right:0;height:78px;grid-template-columns:1fr auto;padding:0 12px;background:#111;border-top:1px solid #ffffff12}.mini-art{width:46px;height:46px}.player-center{display:none}.player-extra{gap:8px}.volume,.player-extra .hide-mobile{display:none}}
 </style>
 </head>
 <body class="logged-out">
@@ -124,16 +124,13 @@ tbody tr:hover{background:#ffffff0a}.empty-state{color:var(--muted);line-height:
 </div>
 
 </section>
-
 <h2 class="section-title" id="insights">Machine Learning Insights</h2>
-<p class="section-sub">Model results and recommendations from the latest ML run.</p>
-<div class="ml-status" id="mlStatus" role="status" aria-live="polite">Loading ML results…</div>
-<div class="ml-kpis" id="mlKpis"></div>
+<p class="section-sub">Listener clusters, predicted trending songs, and weekday listening patterns.</p>
+<div class="ml-status" id="mlStatus" role="status" aria-live="polite">Loading model results…</div>
 <div class="ml-grid">
-  <div class="card"><h3>Listener Segments</h3><div class="table-wrap"><table><thead><tr><th>Cluster</th><th>Plays</th><th>Energy</th><th>Dance</th><th>Skip rate</th></tr></thead><tbody id="clusterRows"></tbody></table></div></div>
-  <div class="card"><h3>Predicted Trending Songs</h3><div class="table-wrap"><table><thead><tr><th>Song</th><th>Current</th><th>Next day</th><th>Change</th></tr></thead><tbody id="trendingRows"></tbody></table></div></div>
-  <div class="card"><h3>Hybrid Recommendations</h3><p id="recommendationSeed" class="section-sub"></p><div class="table-wrap"><table><thead><tr><th>Recommended song</th><th>Score</th></tr></thead><tbody id="recommendationRows"></tbody></table></div></div>
-  <div class="card"><h3>Streams by Day of Week</h3><div class="chart-wrap"><canvas id="mlDowChart"></canvas></div></div>
+  <div class="card"><h3>Listener Clusters</h3><div class="table-wrap"><table><thead><tr><th>Cluster</th><th>Listeners</th><th>Avg plays</th><th>Energy</th><th>Dance</th><th>Skip rate</th></tr></thead><tbody id="clusterRows"></tbody></table></div></div>
+  <div class="card"><h3>Predicted Trending Songs</h3><div class="table-wrap"><table><thead><tr><th>Song</th><th>Current</th><th>Predicted next day</th><th>Predicted change</th></tr></thead><tbody id="trendingRows"></tbody></table></div></div>
+  <div class="card ml-wide"><h3>Streams by Weekday</h3><div class="chart-wrap"><canvas id="mlDowChart"></canvas></div></div>
 </div>
 </div>
 </main>
@@ -232,21 +229,6 @@ tSel.addEventListener('change', ()=>{
   tierChart.update();
 });
 
-function fillMlTable(id, rows, columns){
-  const body = document.getElementById(id);
-  body.replaceChildren();
-  rows.forEach(row=>{
-    const tr = document.createElement('tr');
-    columns.forEach(column=>{
-      const td = document.createElement('td');
-      td.textContent = column.format ? column.format(row[column.key]) : (row[column.key] ?? '—');
-      tr.appendChild(td);
-    });
-    body.appendChild(tr);
-  });
-}
-
-const numberFmt = value => Number(value || 0).toLocaleString(undefined,{maximumFractionDigits:1});
 async function readJsonResponse(response){
   const contentType = response.headers.get('content-type') || '';
   if(!contentType.toLowerCase().includes('application/json')){
@@ -254,52 +236,72 @@ async function readJsonResponse(response){
   }
   return response.json();
 }
+const weekdayTotals = dowOrder.map(day => DATA.genre_dow
+  .filter(row => row.day === day)
+  .reduce((total, row) => total + Number(row.streams || 0), 0));
+function fillMlTable(elementId, rows, columns){
+  const body = document.getElementById(elementId);
+  body.replaceChildren();
+  if(!rows || rows.length === 0){
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = columns.length;
+    cell.className = 'empty-state';
+    cell.textContent = 'Run python ml/run_ml.py to load these results.';
+    row.appendChild(cell);
+    body.appendChild(row);
+    return;
+  }
+  rows.forEach(item=>{
+    const row = document.createElement('tr');
+    columns.forEach(column=>{
+      const cell = document.createElement('td');
+      const value = item[column.key];
+      cell.textContent = column.format ? column.format(value) : (value ?? '—');
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+  });
+}
+function renderWeekdayChart(totals){
+  const values = dowOrder.map((day,index)=>{
+    const value = totals && totals[day];
+    return value === undefined ? weekdayTotals[index] : Number(value || 0);
+  });
+  new Chart(document.getElementById('mlDowChart'),{
+    type:'bar',
+    data:{labels:dowOrder,datasets:[{label:'Streams',data:values,backgroundColor:palette[0]}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:gridColor}}}}
+  });
+}
 async function loadMlInsights(){
   const status = document.getElementById('mlStatus');
   try{
     const response = await fetch('/api/ml-results.json', {cache:'no-store'});
     if(!response.ok) throw new Error(response.status === 404 ? 'not found' : `HTTP ${response.status}`);
     const ml = await readJsonResponse(response);
-    const clusters = ml.user_clusters || [];
-    const trends = ml.top_trending_predicted || [];
-    const rec = ml.hybrid_recommendation_example || {};
-    const recommendations = rec.recommendations || [];
-
-    document.getElementById('mlKpis').innerHTML =
-      kpi(`${(Number(ml.mood_classifier_accuracy || 0)*100).toFixed(1)}%`,'Mood Classifier Accuracy') +
-      kpi(Number(ml.trend_model_r2 || 0).toFixed(3),'Trend Model R²') +
-      kpi(clusters.length,'Listener Segments') +
-      kpi(trends.length,'Trending Candidates');
-
-    fillMlTable('clusterRows',clusters,[
+    fillMlTable('clusterRows',ml.user_clusters || [],[
       {key:'cluster',format:value=>`Cluster ${value}`},
-      {key:'total_plays',format:numberFmt},
+      {key:'listeners',format:value=>Number(value || 0).toLocaleString()},
+      {key:'total_plays',format:value=>Number(value || 0).toLocaleString(undefined,{maximumFractionDigits:1})},
       {key:'avg_energy',format:value=>Number(value || 0).toFixed(3)},
       {key:'avg_dance',format:value=>Number(value || 0).toFixed(3)},
       {key:'skip_rate',format:value=>`${(Number(value || 0)*100).toFixed(1)}%`}
     ]);
-    fillMlTable('trendingRows',trends,[
+    fillMlTable('trendingRows',ml.top_trending_predicted || [],[
       {key:'track_name'},
-      {key:'streams',format:numberFmt},
-      {key:'predicted_next',format:numberFmt},
-      {key:'predicted_growth',format:value=>`${Number(value || 0)>0?'+':''}${numberFmt(value)}`}
+      {key:'streams',format:value=>Number(value || 0).toLocaleString(undefined,{maximumFractionDigits:1})},
+      {key:'predicted_next',format:value=>Number(value || 0).toLocaleString(undefined,{maximumFractionDigits:1})},
+      {key:'predicted_growth',format:value=>`${Number(value || 0)>0?'+':''}${Number(value || 0).toLocaleString(undefined,{maximumFractionDigits:1})}`}
     ]);
-    document.getElementById('recommendationSeed').textContent = rec.seed_song ? `Because you listened to ${rec.seed_song}` : '';
-    fillMlTable('recommendationRows',recommendations,[
-      {key:'track_name'},
-      {key:'score',format:value=>Number(value || 0).toFixed(3)}
-    ]);
-
-    const temporal = ml.temporal_dow_totals || {};
-    new Chart(document.getElementById('mlDowChart'),{
-      type:'bar',
-      data:{labels:dowOrder,datasets:[{label:'Streams',data:dowOrder.map(day=>Number(temporal[day] || 0)),backgroundColor:palette[0]}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:gridColor}}}}
-    });
+    renderWeekdayChart(ml.temporal_dow_totals || {});
     status.textContent = 'Showing results from the latest ML run.';
   }catch(error){
+    fillMlTable('clusterRows',[],Array(6).fill({key:''}));
+    fillMlTable('trendingRows',[],Array(4).fill({key:''}));
+    renderWeekdayChart({});
     status.textContent = error.message === 'not found'
-      ? 'No ML results yet. Run `python ml/run_ml.py` from the project directory, then refresh this page.'
+      ? 'Run python ml/run_ml.py to populate listener clusters and trending-song predictions.'
       : `Could not load ML results (${error.message}).`;
   }
 }
@@ -378,7 +380,7 @@ loginForm.addEventListener('submit',async event=>{
 });
 document.getElementById('logoutButton').addEventListener('click',async()=>{
   await fetch('/api/logout',{method:'POST'});
-  personalized.hidden=true; loginMessage.textContent='You are logged out. Public ML analytics remain available.';
+  personalized.hidden=true; loginMessage.textContent='You are logged out. Public analytics remain available.';
   setLoginState(null);
 });
 fetch('/api/session',{cache:'no-store'}).then(readJsonResponse).then(state=>setLoginState(state.authenticated?state.username:null)).catch(error=>{loginMessage.classList.add('error');loginMessage.textContent=error.message;});

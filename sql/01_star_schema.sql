@@ -1,13 +1,7 @@
--- ============================================================================
--- SPOTIFY ANALYTICS DATA WAREHOUSE — STAR SCHEMA (Kimball-style)
--- ============================================================================
 DROP SCHEMA IF EXISTS dwh CASCADE;
 CREATE SCHEMA dwh;
 SET search_path TO dwh;
 
--- ---------------------------------------------------------------------------
--- DIM_DATE — standard date dimension
--- ---------------------------------------------------------------------------
 CREATE TABLE dim_date (
     date_key        INT PRIMARY KEY,           -- YYYYMMDD
     full_date       DATE NOT NULL UNIQUE,
@@ -22,9 +16,6 @@ CREATE TABLE dim_date (
     is_weekend      BOOLEAN
 );
 
--- ---------------------------------------------------------------------------
--- DIM_ARTIST — SCD Type 2 (history preserved: popularity tier, genre focus)
--- ---------------------------------------------------------------------------
 CREATE TABLE dim_artist (
     artist_sk           BIGSERIAL PRIMARY KEY,     -- surrogate key (versioned)
     artist_bk            VARCHAR(200) NOT NULL,     -- business/natural key (artist name, normalized)
@@ -42,9 +33,6 @@ CREATE TABLE dim_artist (
 );
 CREATE INDEX idx_dim_artist_bk_current ON dim_artist(artist_bk, is_current);
 
--- ---------------------------------------------------------------------------
--- DIM_SONG — SCD Type 2 (tracks audio-feature / genre reclassification drift)
--- ---------------------------------------------------------------------------
 CREATE TABLE dim_song (
     song_sk               BIGSERIAL PRIMARY KEY,
     song_bk                VARCHAR(64) NOT NULL,        -- track_id (Spotify ID) = durable business key
@@ -73,9 +61,6 @@ CREATE TABLE dim_song (
 );
 CREATE INDEX idx_dim_song_bk_current ON dim_song(song_bk, is_current);
 
--- ---------------------------------------------------------------------------
--- DIM_ALBUM — SCD Type 1 (overwrite; albums rarely need history)
--- ---------------------------------------------------------------------------
 CREATE TABLE dim_album (
     album_sk        BIGSERIAL PRIMARY KEY,
     album_bk         VARCHAR(64) NOT NULL UNIQUE,   -- track_album_id
@@ -84,9 +69,6 @@ CREATE TABLE dim_album (
     load_ts           TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- ---------------------------------------------------------------------------
--- DIM_GENRE — conformed genre/subgenre hierarchy (SCD Type 1)
--- ---------------------------------------------------------------------------
 CREATE TABLE dim_genre (
     genre_sk        BIGSERIAL PRIMARY KEY,
     genre_bk         VARCHAR(150) NOT NULL UNIQUE,  -- genre|subgenre concat
@@ -94,12 +76,9 @@ CREATE TABLE dim_genre (
     playlist_subgenre VARCHAR(100)
 );
 
--- ---------------------------------------------------------------------------
--- DIM_USER — SCD Type 2 (subscription tier / user segment changes)
--- ---------------------------------------------------------------------------
 CREATE TABLE dim_user (
     user_sk          BIGSERIAL PRIMARY KEY,
-    user_bk           VARCHAR(64) NOT NULL,          -- synthetic user_id
+    user_bk           VARCHAR(64) NOT NULL,          -- listener ID from listening-statistics source
     signup_date        DATE,
     country             VARCHAR(2),
     age_bracket          VARCHAR(10),
@@ -114,10 +93,6 @@ CREATE TABLE dim_user (
 );
 CREATE INDEX idx_dim_user_bk_current ON dim_user(user_bk, is_current);
 
--- ---------------------------------------------------------------------------
--- BRIDGE: SONG <-> ARTIST (many-to-many, weighted for collaborations/features)
--- weight = 1 / (# artists credited on the song); sums to 1.0 per song
--- ---------------------------------------------------------------------------
 CREATE TABLE bridge_song_artist (
     song_sk       BIGINT NOT NULL REFERENCES dim_song(song_sk),
     artist_sk     BIGINT NOT NULL REFERENCES dim_artist(artist_sk),
@@ -126,9 +101,6 @@ CREATE TABLE bridge_song_artist (
     PRIMARY KEY (song_sk, artist_sk)
 );
 
--- ---------------------------------------------------------------------------
--- FACT_STREAM — one row per (user, song, day) grain — daily aggregated plays
--- ---------------------------------------------------------------------------
 CREATE TABLE fact_stream (
     stream_fact_sk   BIGSERIAL PRIMARY KEY,
     date_key           INT NOT NULL REFERENCES dim_date(date_key),
@@ -148,14 +120,6 @@ CREATE INDEX idx_fact_stream_song ON fact_stream(song_sk);
 CREATE INDEX idx_fact_stream_user ON fact_stream(user_sk);
 CREATE INDEX idx_fact_stream_genre ON fact_stream(genre_sk);
 
--- ---------------------------------------------------------------------------
--- FACT_SONG_ARTIST_STREAM_ALLOC — pre-allocated WEIGHTED vs UNWEIGHTED metric
--- Grain: date x song x artist. Built from fact_stream x bridge_song_artist.
---   unweighted_streams = full stream_count credited to EACH artist on the song
---                          (correct for "artist's own popularity/reach")
---   weighted_streams    = stream_count * weighting_factor
---                          (correct for global totals / no double counting)
--- ---------------------------------------------------------------------------
 CREATE TABLE fact_song_artist_daily (
     date_key             INT NOT NULL REFERENCES dim_date(date_key),
     song_sk               BIGINT NOT NULL REFERENCES dim_song(song_sk),
@@ -167,9 +131,6 @@ CREATE TABLE fact_song_artist_daily (
 CREATE INDEX idx_fsad_date ON fact_song_artist_daily(date_key);
 CREATE INDEX idx_fsad_artist ON fact_song_artist_daily(artist_sk);
 
--- ---------------------------------------------------------------------------
--- ETL metadata / data-quality audit tables
--- ---------------------------------------------------------------------------
 CREATE TABLE etl_batch_log (
     batch_id        VARCHAR(40) PRIMARY KEY,
     source_name       VARCHAR(100),

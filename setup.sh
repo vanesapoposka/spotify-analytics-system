@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Spotify Analytics DWH — one-command setup.
-# Starts Postgres (Docker), applies the schema, loads the dataset, generates
-# synthetic listening events, derives weighted/unweighted metrics, and runs
+# Starts Postgres (Docker), applies the schema, loads the datasets, derives
+# metrics, and runs
 # the ML layer. Safe to re-run: it always rebuilds the warehouse from scratch.
 # ==============================================================================
 set -euo pipefail
@@ -37,11 +37,11 @@ docker compose exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -
 echo "== 5/7  Running incremental ETL (catalog load + SCD2 + bridge table) =="
 python3 etl/load_dwh.py
 
-echo "== 6/7  Generating 60 days of synthetic listening events =="
-python3 etl/generate_events.py
+echo "== 6/7  Loading listening statistics from CSV =="
+python3 etl/load_listening_stats.py
 docker compose exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -f /sql/02_derive_weighted_metrics.sql
 
-echo "== 7/7  Running ML layer (clustering, classification, trend, recommender, temporal) =="
+echo "== 7/7  Running ML layer (listener clustering, trend prediction, weekday streams) =="
 python3 ml/run_ml.py
 
 echo ""

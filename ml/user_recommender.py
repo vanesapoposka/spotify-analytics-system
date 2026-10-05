@@ -3,6 +3,7 @@
 The model combines a standardized audio-feature profile with collaborative
 signals from users who listened to many of the same tracks.
 """
+
 from functools import lru_cache
 
 import numpy as np
@@ -11,7 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import StandardScaler
 from sqlalchemy import text
 
-from etl.database_configuration import get_engine
+from etl.db_config import get_engine
 
 
 ENGINE = get_engine()

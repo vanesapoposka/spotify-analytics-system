@@ -1,4 +1,4 @@
-# Spotify Analytics Data Warehouse — Complete Project
+# Spotify Analytics Data Warehouse
 
 Everything needed to run this from zero: the dataset (already included, no
 download needed), a Dockerized Postgres, all ETL/SCD2/OLAP/ML code, and the
@@ -11,10 +11,11 @@ spotify_dwh/
 ├── docker-compose.yml      <- Postgres 16, one command to start
 ├── requirements.txt        <- pinned Python dependencies
 ├── setup.sh                <- one-command automated setup (Linux/Mac/WSL)
-├── data/spotify_songs.csv  <- the dataset (32,833 real Spotify tracks) — already included
+├── data/spotify_songs.csv  <- song catalog (32,833 Spotify tracks) — already included
+├── data/spotify_listening_stats.csv <- daily listening-statistics demo dataset
 ├── sql/                    <- star schema DDL + weighted-metric derivation + OLAP queries
 ├── etl/                    <- incremental ETL, SCD2 engine, data-quality rules, db_config.py
-├── ml/                     <- clustering, mood classification, trend prediction, recommender
+├── ml/                     <- listener clustering, trend prediction, and personalized recommendations
 ├── dashboard/               <- published interactive dashboard (open directly in a browser)
 ├── data_vault/              <- alternative Data Vault 2.0 model (DDL only, optional)
 └── airflow_dags/            <- Airflow orchestration (optional, see bottom)
@@ -40,8 +41,8 @@ This single command will:
 2. Create a Python virtual environment and install pinned dependencies
 3. Apply the star-schema DDL
 4. Run the incremental ETL (loads the 32,833-track dataset, applies data-quality rules, builds SCD2-versioned dimensions and the weighted song-artist bridge)
-5. Generate 60 days of synthetic listening events (~440K rows) and derive the weighted/unweighted artist metrics
-6. Run the full ML layer (clustering, mood classification, trend prediction, hybrid recommender, temporal analysis)
+5. Load the supplied 60-day listening-statistics CSV (~375K user/song/day rows) and derive weighted/unweighted artist metrics
+6. Run the ML layer (listener clustering, trending-song prediction, and weekday stream totals)
 
 It takes 2-5 minutes depending on your machine. You'll see progress printed for every step — if anything fails, the script stops immediately and shows the error.
 
@@ -68,8 +69,8 @@ docker compose exec -T postgres psql -U postgres -d spotify_dwh -f /sql/01_star_
 # 4. Run ETL (loads dataset, SCD2, bridge table)
 python etl/load_dwh.py
 
-# 5. Generate listening events + derive weighted metrics
-python etl/generate_events.py
+# 5. Load listening statistics from CSV + derive weighted metrics
+python etl/load_listening_stats.py
 docker compose exec -T postgres psql -U postgres -d spotify_dwh -f /sql/02_derive_weighted_metrics.sql
 
 # 6. Run ML layer
@@ -84,7 +85,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Then run the schema, ETL, event-generation, and ML commands above, replacing
+Then run the schema, catalog ETL, listening-statistics load, and ML commands above, replacing
 `python` with `python3` if that is how Python is installed on your system.
 
 ---
@@ -100,7 +101,7 @@ UNION ALL SELECT 'dim_user', count(*) FROM dwh.dim_user
 UNION ALL SELECT 'fact_stream', count(*) FROM dwh.fact_stream
 UNION ALL SELECT 'fact_song_artist_daily', count(*) FROM dwh.fact_song_artist_daily;"
 ```
-Expect: ~28,000 songs · ~10,800 artists · 4,000 users · ~440,000 stream rows · ~344,000 weighted-metric rows.
+Expect: ~28,000 songs · ~10,800 artists · 4,000 users · ~375,000 stream rows · a similar number of weighted-metric rows.
 
 **2. The weighted vs. unweighted logic** — pick any multi-artist song and confirm the weighted streams sum back to the true total:
 ```bash
@@ -119,19 +120,19 @@ Each artist's `weighted_streams` should be the song's true stream count divided 
 docker compose exec postgres psql -U postgres -d spotify_dwh -f /sql/03_olap_queries.sql
 ```
 
-**4. ML results** — check `ml/ml_results.json` was written, or re-run `python3 ml/run_ml.py` and watch the console output (cluster profiles, classifier accuracy, top predicted trending songs, example recommendations).
+**4. ML results** — run `python3 ml/run_ml.py`. It writes `ml/ml_results.json` with listener clusters, top predicted trending songs, and streams by weekday.
 
-**5. Dashboard** — on Windows, run `.\dashboard\serve_dashboard.ps1` from the project directory and open [http://127.0.0.1:8000/spotify_dashboard.html](http://127.0.0.1:8000/spotify_dashboard.html) in your browser. The Machine Learning section shows listener segments, classifier accuracy, trend predictions, hybrid recommendations, and weekday totals from `ml/ml_results.json`. Run `python ml/run_ml.py` to refresh those results, then reload the page. The other dashboard charts remain a static snapshot and do not refresh automatically from the database. Press Ctrl+C in the PowerShell window to stop the local server.
+**5. Dashboard** — on Windows, run `.\dashboard\serve_dashboard.ps1` from the project directory and open the URL it prints. The Machine Learning section shows listener clusters, trending-song predictions, and weekday stream totals from `ml/ml_results.json`. Run `python ml/run_ml.py` to refresh those results, then reload the page. The other dashboard charts remain a static snapshot and do not refresh automatically from the database. Press Ctrl+C in the PowerShell window to stop the local server.
 
 ### Demo login and personalized recommendations
 
 When signed out, visitors can see the current aggregate ML analytics only; the
 warehouse charts and personal recommendations are available after login. Sign
 in to see song, album, and artist recommendations based on that
-listener's generated play history and similar listeners. The hybrid recommender
+listener's play history from the supplied listening-statistics dataset and similar listeners. The hybrid recommender
 blends collaborative filtering with similarity across song audio features.
 
-The synthetic event generator creates usernames `U000000` through `U003999`.
+The listening-statistics dataset contains demo usernames `U000000` through `U003999`.
 For example, try `U000001`, `U000042`, or `U000123`; each uses the demo password
 `password123`. Login checks the username against the current `dwh.dim_user`
 records, so the warehouse must be running and populated. All demo accounts use
@@ -187,5 +188,3 @@ bash airflow_wsl.sh dags test spotify_dwh_daily "$(date +%F)"
 ```
 This WSL venv is separate from the Windows `.venv`. The constraints URL is built from the venv's actual Python version. `airflow_wsl.sh` sets the project and Airflow paths and copies the current DAG into Airflow's DAG folder each time. The runnable DAG is manual-only because its schema task drops and recreates the warehouse; replace `data/spotify_songs.csv` before running it if you want to load a new catalog.
 
-## Optional: Data Vault model
-`data_vault/data_vault_ddl.sql` implements the alternative 5-hub / 10-link/satellite design discussed earlier (with one modification — see the comment header in that file). It's schema-only; wiring a loader for it is the natural next step if you want to pursue that path instead of (or alongside) the star schema.

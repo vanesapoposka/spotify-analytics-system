@@ -19,7 +19,7 @@ ML_RESULTS = PROJECT_ROOT / "ml" / "ml_results.json"
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from sqlalchemy import text
-from etl.database_configuration import get_engine
+from etl.db_config import get_engine
 
 
 ENGINE = get_engine()
