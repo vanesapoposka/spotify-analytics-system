@@ -1,0 +1,147 @@
+{
+  "user_clusters": [
+    {
+      "cluster": 0,
+      "avg_valence": 0.517,
+      "avg_energy": 0.675,
+      "avg_dance": 0.662,
+      "total_plays": 227.739,
+      "skip_rate": 0.152,
+      "genre_diversity": 6.0
+    },
+    {
+      "cluster": 1,
+      "avg_valence": 0.495,
+      "avg_energy": 0.654,
+      "avg_dance": 0.662,
+      "total_plays": 82.68,
+      "skip_rate": 0.144,
+      "genre_diversity": 6.0
+    },
+    {
+      "cluster": 2,
+      "avg_valence": 0.545,
+      "avg_energy": 0.683,
+      "avg_dance": 0.675,
+      "total_plays": 83.019,
+      "skip_rate": 0.153,
+      "genre_diversity": 6.0
+    },
+    {
+      "cluster": 3,
+      "avg_valence": 0.504,
+      "avg_energy": 0.684,
+      "avg_dance": 0.646,
+      "total_plays": 75.873,
+      "skip_rate": 0.151,
+      "genre_diversity": 6.0
+    },
+    {
+      "cluster": 4,
+      "avg_valence": 0.527,
+      "avg_energy": 0.669,
+      "avg_dance": 0.664,
+      "total_plays": 32.674,
+      "skip_rate": 0.162,
+      "genre_diversity": 4.957
+    }
+  ],
+  "mood_classifier_accuracy": 1.0,
+  "trend_model_r2": 0.0136,
+  "top_trending_predicted": [
+    {
+      "track_name": "Into the Unknown - Panic! At The Disco Version",
+      "streams": 0,
+      "predicted_next": 1.48,
+      "predicted_growth": 1.48
+    },
+    {
+      "track_name": "The Less I Know The Better",
+      "streams": 0,
+      "predicted_next": 1.48,
+      "predicted_growth": 1.48
+    },
+    {
+      "track_name": "On & On",
+      "streams": 0,
+      "predicted_next": 1.41,
+      "predicted_growth": 1.41
+    },
+    {
+      "track_name": "None Of Your Concern",
+      "streams": 0,
+      "predicted_next": 1.41,
+      "predicted_growth": 1.41
+    },
+    {
+      "track_name": "Dreams Money Can Buy",
+      "streams": 0,
+      "predicted_next": 1.4,
+      "predicted_growth": 1.4
+    },
+    {
+      "track_name": "What Makes You Beautiful",
+      "streams": 0,
+      "predicted_next": 1.4,
+      "predicted_growth": 1.4
+    },
+    {
+      "track_name": "Oops!...I Did It Again",
+      "streams": 0,
+      "predicted_next": 1.39,
+      "predicted_growth": 1.39
+    },
+    {
+      "track_name": "Don't Let Me Down",
+      "streams": 0,
+      "predicted_next": 1.37,
+      "predicted_growth": 1.37
+    },
+    {
+      "track_name": "Let Me Love You",
+      "streams": 0,
+      "predicted_next": 1.35,
+      "predicted_growth": 1.35
+    },
+    {
+      "track_name": "What About Your Friends",
+      "streams": 0,
+      "predicted_next": 1.35,
+      "predicted_growth": 1.35
+    }
+  ],
+  "hybrid_recommendation_example": {
+    "seed_song": "CYANIDE",
+    "recommendations": [
+      {
+        "track_name": "Caro",
+        "score": 0.463
+      },
+      {
+        "track_name": "Callaita",
+        "score": 0.454
+      },
+      {
+        "track_name": "Cuaderno",
+        "score": 0.449
+      },
+      {
+        "track_name": "Hola - Remix",
+        "score": 0.444
+      },
+      {
+        "track_name": "OOOUUU",
+        "score": 0.44
+      }
+    ]
+  },
+  "temporal_dow_totals": {
+    "Tuesday": 56173,
+    "Thursday": 55434,
+    "Monday": 54635,
+    "Wednesday": 54445,
+    "Friday": 52615,
+    "Saturday": 49657,
+    "Sunday": 49159
+  }
+}

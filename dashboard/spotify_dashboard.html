@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spotify Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  color-scheme:dark; --bg:#000; --surface:#121212; --surface-2:#242424; --surface-3:#2a2a2a;
+  --border:#343434; --text:#f7f7f7; --muted:#b3b3b3; --accent:#1ed760; --accent-dark:#1db954;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:14px;}
+button,select{font:inherit}
+.app-shell{height:100vh;min-height:600px;display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:minmax(0,1fr) 90px;gap:8px;padding:8px;}
+.sidebar{grid-row:1;grid-column:1;display:flex;flex-direction:column;gap:8px;min-height:0;}
+.side-block{background:var(--surface);border-radius:8px;padding:18px 16px;}
+.logged-out .analytics-nav,.logged-out .analytics-card{display:none}.logged-out #warehouseAnalytics{display:none!important}
+.brand{display:flex;align-items:center;gap:9px;color:#fff;font-size:20px;font-weight:700;letter-spacing:-.7px;margin:0 0 20px;}
+.brand-mark{width:27px;height:27px;border-radius:50%;background:var(--accent);color:#000;display:grid;place-items:center;font-weight:900;font-size:18px;}
+.nav-list{display:grid;gap:10px;}
+.nav-link{border:0;background:none;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:16px;font-size:14px;font-weight:700;padding:7px 0;cursor:pointer;}
+.nav-link:hover,.nav-link.active{color:#fff}.nav-icon{font-size:20px;line-height:1;width:22px;text-align:center;}
+.library-head{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-weight:700;margin-bottom:18px;}
+.library-head .nav-link{padding:0}.library-card{border-radius:8px;background:var(--surface-2);padding:16px;margin:0 0 10px;}
+.library-card b{display:block;margin-bottom:7px}.library-card p{font-size:13px;color:#ddd;margin:0 0 14px;line-height:1.45;}
+.small-pill{border:0;border-radius:999px;background:#fff;color:#000;font-weight:700;padding:8px 14px;cursor:pointer;}
+.side-foot{margin-top:auto;color:var(--muted);font-size:11px;line-height:1.7;padding:14px 8px;}
+.main-view{grid-row:1;grid-column:2;min-width:0;min-height:0;overflow-y:auto;border-radius:8px;background:linear-gradient(180deg,#286f50 0,#183c30 210px,#121212 410px);scrollbar-color:#666 transparent;}
+.topbar{position:sticky;top:0;z-index:5;height:64px;padding:0 26px;display:flex;align-items:center;justify-content:space-between;background:rgba(18,18,18,.78);backdrop-filter:blur(12px);}
+.history{display:flex;gap:8px}.round-button{width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:20px;cursor:pointer;}
+.auth-area{display:flex;align-items:center;gap:10px}.login-form{display:flex;align-items:center;gap:7px}.login-form input{width:126px;min-width:0;border:1px solid #ffffff24;border-radius:999px;background:#090909;color:#fff;padding:9px 12px;font-size:12px;outline:none}.login-form input:focus{border-color:#fff}.login-form button,.logout-button{border:0;border-radius:999px;background:#fff;color:#000;font-weight:700;padding:9px 15px;font-size:12px;cursor:pointer}.logout-button{background:#242424;color:#fff}.account-pill{border:0;border-radius:999px;background:#090909;color:#fff;display:flex;align-items:center;gap:8px;padding:4px 12px 4px 5px;font-size:13px;font-weight:700;}
+.login-message{font-size:12px;color:var(--muted);min-height:16px;margin:0 0 12px}.login-message.error{color:#ff8a8a}.auth-area [hidden]{display:none!important}
+.personal-section{margin:8px 0 30px}.personal-section[hidden]{display:none}.personal-heading{display:flex;align-items:end;justify-content:space-between;gap:12px}.personal-heading h2{margin:0;font-size:24px;letter-spacing:-.5px}.model-badge{font-size:11px;color:#07150c;background:var(--accent);border-radius:999px;padding:6px 10px;font-weight:700}.recommendation-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:14px;margin-top:14px}.recommendation-panel{border-radius:8px;background:#181818;padding:18px;min-width:0}.recommendation-panel h3{margin:0 0 12px;font-size:15px}.recommendation-list{list-style:none;padding:0;margin:0}.recommendation-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 8px;border-radius:5px;border-bottom:1px solid #ffffff10}.recommendation-list li:hover{background:#ffffff0a}.recommendation-main{min-width:0}.recommendation-main b,.recommendation-main span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.recommendation-main b{font-size:13px}.recommendation-main span{color:var(--muted);font-size:11px;margin-top:4px}.rec-score{color:var(--accent);font-variant-numeric:tabular-nums;font-size:11px;white-space:nowrap}.recommendation-empty{color:var(--muted);font-size:12px;padding:8px}
+.avatar{width:27px;height:27px;display:grid;place-items:center;border-radius:50%;background:#535353;color:#fff;}
+.content{padding:24px 28px 120px;}
+.hero{display:flex;align-items:end;gap:22px;min-height:220px;padding:8px 0 24px;color:#fff;}
+.hero-art{flex:none;width:190px;height:190px;border-radius:5px;background:linear-gradient(145deg,#a7e5ad,#1ed760 55%,#12853e);display:grid;place-items:center;box-shadow:0 8px 30px #0005;}
+.hero-art svg{width:88px;height:88px;filter:drop-shadow(0 4px 16px #0018);}
+.eyebrow{font-size:12px;font-weight:700;margin:0 0 8px}.hero h1{font-size:clamp(36px,5vw,70px);line-height:1;letter-spacing:-3px;margin:0 0 12px;font-weight:900;}
+.sub{color:#e4e9e5;font-size:14px;margin:0}.hero-meta{color:#fff;font-size:13px;margin-top:16px;font-weight:700;}
+.hero-meta span{font-weight:400;color:#eee}
+.section-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:4px 0 20px;}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:0}
+select{background:#ffffff18;color:#fff;border:1px solid #ffffff28;border-radius:999px;padding:9px 14px;font-size:13px;font-weight:700;outline:none;}
+select option{background:#242424;color:#fff}
+.refresh-note{color:var(--muted);font-size:12px}
+.section-title{margin:32px 0 4px;font-size:23px;letter-spacing:-.5px}.section-title:hover{text-decoration:underline;cursor:pointer}
+.section-sub{color:var(--muted);font-size:13px;margin:6px 0 14px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 20px}
+.kpi{background:linear-gradient(135deg,#232323,#181818);border-radius:8px;padding:18px 20px;min-height:100px;}
+.kpi .val{font-size:27px;line-height:1.2;font-weight:800;color:#fff;letter-spacing:-.7px}.kpi .lbl{font-size:12px;color:var(--muted);margin-top:7px;}
+.grid,.ml-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.card{background:#181818;border:0;border-radius:8px;padding:19px 20px 16px;overflow:hidden;min-width:0;transition:background .18s ease;}
+.card:hover{background:#202020}.card h3{margin:0 0 16px;font-size:16px;color:#fff;font-weight:700;letter-spacing:-.2px;}
+.chart-wrap{height:260px;position:relative}.chart-wrap canvas{max-width:100%;max-height:100%;}
+.ml-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0 16px}
+.ml-status{color:var(--muted);font-size:12px;min-height:1.2em;margin:8px 0}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #ffffff12;white-space:nowrap}
+th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+tbody tr:hover{background:#ffffff0a}.empty-state{color:var(--muted);line-height:1.5}
+.player{grid-column:1 / -1;grid-row:2;display:grid;grid-template-columns:1fr 1.5fr 1fr;align-items:center;background:#000;padding:0 12px;gap:18px;}
+.now-playing{display:flex;align-items:center;gap:12px;min-width:0}.mini-art{width:56px;height:56px;flex:none;border-radius:4px;background:linear-gradient(145deg,#a7e5ad,#1ed760 60%,#12853e);display:grid;place-items:center;color:#053518;font-size:22px;}
+.track-copy{min-width:0}.track-copy b,.track-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.track-copy b{font-size:13px}.track-copy span{color:var(--muted);font-size:11px;margin-top:4px}.save-track{color:var(--accent);font-size:18px;margin-left:6px;}
+.player-center{display:grid;gap:7px;justify-items:center}.player-controls{display:flex;align-items:center;gap:20px;color:var(--muted);font-size:14px}.player-controls .play{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#fff;color:#000;font-size:13px;}
+.progress-row{width:min(100%,480px);display:flex;align-items:center;gap:8px;color:var(--muted);font-size:10px}.progress{height:4px;border-radius:9px;background:#4d4d4d;flex:1;overflow:hidden}.progress span{display:block;width:37%;height:100%;background:#fff;border-radius:inherit;}
+.player-extra{display:flex;justify-content:flex-end;align-items:center;gap:12px;color:var(--muted);font-size:15px}.volume{width:90px;height:4px;background:#555;border-radius:8px;overflow:hidden}.volume span{display:block;width:65%;height:100%;background:#fff}
+@media(max-width:1050px){.app-shell{grid-template-columns:200px minmax(0,1fr)}.content{padding:20px}.hero-art{width:155px;height:155px}.hero{min-height:190px}.kpis,.ml-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.player{grid-template-columns:1fr 1.2fr .7fr}.recommendation-grid{grid-template-columns:1fr 1fr}.recommendation-panel:first-child{grid-column:1/-1}}
+@media(max-width:720px){.app-shell{height:auto;min-height:100vh;display:flex;flex-direction:column;padding:0;gap:0}.sidebar{display:none}.main-view{height:calc(100vh - 78px);border-radius:0}.topbar{height:58px;padding:0 12px}.history{display:none}.auth-area{width:100%;justify-content:flex-end}.login-form{width:100%;justify-content:flex-end;gap:5px}.login-form input{width:min(31vw,126px);padding:8px 9px}.login-form button,.logout-button{padding:8px 11px}.content{padding:18px 16px 40px}.hero{min-height:0;align-items:center;gap:16px;padding:12px 0 24px}.hero-art{width:104px;height:104px}.hero-art svg{width:52px;height:52px}.hero h1{font-size:34px;letter-spacing:-1.5px}.hero-meta{font-size:11px;margin-top:8px}.section-toolbar{align-items:flex-start;flex-direction:column}.refresh-note{display:none}.grid,.ml-grid{grid-template-columns:1fr}.chart-wrap{height:230px}.kpis,.ml-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kpi{padding:14px;min-height:84px}.kpi .val{font-size:22px}.recommendation-grid{grid-template-columns:1fr}.recommendation-panel:first-child{grid-column:auto}.personal-heading{align-items:flex-start;flex-direction:column}.player{position:fixed;z-index:10;bottom:0;left:0;right:0;height:78px;grid-template-columns:1fr auto;padding:0 12px;background:#111;border-top:1px solid #ffffff12}.mini-art{width:46px;height:46px}.player-center{display:none}.player-extra{gap:8px}.volume,.player-extra .hide-mobile{display:none}}
+</style>
+</head>
+<body class="logged-out">
+<div class="app-shell">
+<aside class="sidebar" aria-label="Main navigation">
+  <div class="side-block">
+    <div class="brand"><span class="brand-mark">◖</span> Spotify</div>
+    <nav class="nav-list">
+      <a class="nav-link active" href="#overview"><span class="nav-icon">⌂</span>Home</a>
+      <a class="nav-link analytics-nav" href="#analytics"><span class="nav-icon">⌕</span>Search analytics</a>
+    </nav>
+  </div>
+  <div class="side-block" style="flex:1;overflow:auto">
+    <div class="library-head"><span>▤&nbsp; Your Library</span><a class="nav-link" href="#insights" aria-label="Go to insights">＋</a></div>
+    <div class="library-card analytics-card"><b>Your analytics</b><p>Explore listening trends across genres, artists, and subscribers.</p><a class="small-pill" href="#analytics">Open dashboard</a></div>
+    <div class="library-card"><b>Machine learning</b><p>Model scores, trending tracks, and song recommendations.</p><a class="small-pill" href="#insights">View insights</a></div>
+  </div>
+  <div class="side-foot">Local Spotify listening analytics<br>Dashboard data is based on your warehouse.</div>
+</aside>
+<main class="main-view" id="overview">
+<header class="topbar"><div class="history"></div><div class="auth-area"><form class="login-form" id="loginForm"><input id="usernameInput" name="username" placeholder="Username" aria-label="Username" autocomplete="username" required><input id="passwordInput" name="password" type="password" placeholder="Password" aria-label="Password" autocomplete="current-password" required><button type="submit">Log in</button></form><div class="account-pill" id="loggedInPill" hidden><span class="avatar">♫</span><span id="loggedInName">Listener</span></div><button class="logout-button" id="logoutButton" hidden>Log out</button></div></header>
+<div class="content">
+<section class="hero" aria-labelledby="dashboard-title">
+  <div class="hero-art" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="48" fill="#07150C"/><path d="M22 39c20-6 41-4 58 5M25 50c17-5 34-3 49 4M29 61c14-4 28-2 40 3" stroke="#1ED760" stroke-width="7" stroke-linecap="round"/></svg></div>
+  <div><p class="eyebrow">YOUR DATA, YOUR SOUND</p><h1 id="dashboard-title">Listening Analytics</h1><p class="sub">A closer look at the music and listeners in your warehouse.</p><div class="hero-meta">Spotify Data Warehouse <span>· Analytics collection · Updated from your latest load</span></div></div>
+</section>
+<p class="login-message" id="loginMessage" role="status" aria-live="polite"></p>
+<section class="personal-section" id="personalized" hidden>
+  <div class="personal-heading"><div><h2 id="personalTitle">Picked for you</h2><p class="section-sub">Personalized from your listening history and similar listeners.</p></div><span class="model-badge" id="modelBadge">Hybrid ML</span></div>
+  <div class="recommendation-grid">
+    <div class="recommendation-panel"><h3>Songs for you</h3><ol class="recommendation-list" id="personalSongs"></ol></div>
+    <div class="recommendation-panel"><h3>Albums to explore</h3><ol class="recommendation-list" id="personalAlbums"></ol></div>
+    <div class="recommendation-panel"><h3>Artists you may like</h3><ol class="recommendation-list" id="personalArtists"></ol></div>
+  </div>
+</section>
+
+<section id="warehouseAnalytics">
+<div class="section-toolbar" id="analytics"><div class="filters">
+  <select id="genreFilter"><option value="ALL">All Genres</option></select>
+  <select id="tierFilter"><option value="ALL">All Subscription Tiers</option></select>
+</div><span class="refresh-note">Use filters to explore the listening snapshot</span></div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="grid">
+  <div class="card"><h3>Daily Streams (60-day window)</h3><div class="chart-wrap"><canvas id="dailyChart"></canvas></div></div>
+  <div class="card"><h3>Streams by Genre</h3><div class="chart-wrap"><canvas id="genreChart"></canvas></div></div>
+  <div class="card"><h3>Streams by Mood</h3><div class="chart-wrap"><canvas id="moodChart"></canvas></div></div>
+  <div class="card"><h3>Streams &amp; Users by Subscription Tier</h3><div class="chart-wrap"><canvas id="tierChart"></canvas></div></div>
+  <div class="card"><h3>Top Artists (weighted global streams)</h3><div class="chart-wrap"><canvas id="artistChart"></canvas></div></div>
+  <div class="card"><h3>Genre Activity by Day of Week</h3><div class="chart-wrap"><canvas id="dowChart"></canvas></div></div>
+</div>
+
+</section>
+
+<h2 class="section-title" id="insights">Machine Learning Insights</h2>
+<p class="section-sub">Model results and recommendations from the latest ML run.</p>
+<div class="ml-status" id="mlStatus" role="status" aria-live="polite">Loading ML results…</div>
+<div class="ml-kpis" id="mlKpis"></div>
+<div class="ml-grid">
+  <div class="card"><h3>Listener Segments</h3><div class="table-wrap"><table><thead><tr><th>Cluster</th><th>Plays</th><th>Energy</th><th>Dance</th><th>Skip rate</th></tr></thead><tbody id="clusterRows"></tbody></table></div></div>
+  <div class="card"><h3>Predicted Trending Songs</h3><div class="table-wrap"><table><thead><tr><th>Song</th><th>Current</th><th>Next day</th><th>Change</th></tr></thead><tbody id="trendingRows"></tbody></table></div></div>
+  <div class="card"><h3>Hybrid Recommendations</h3><p id="recommendationSeed" class="section-sub"></p><div class="table-wrap"><table><thead><tr><th>Recommended song</th><th>Score</th></tr></thead><tbody id="recommendationRows"></tbody></table></div></div>
+  <div class="card"><h3>Streams by Day of Week</h3><div class="chart-wrap"><canvas id="mlDowChart"></canvas></div></div>
+</div>
+</div>
+</main>
+<!--<footer class="player" aria-label="Dashboard player-style footer">-->
+<!--  <div class="now-playing"><div class="mini-art" aria-hidden="true">♫</div><div class="track-copy"><b>Listening Analytics</b><span>Spotify Data Warehouse</span></div><span class="save-track" aria-hidden="true">♡</span></div>-->
+<!--  <div class="player-center"><div class="player-controls" aria-hidden="true"><span>⇄</span><span>◀</span><span class="play">▶</span><span>▶</span><span>↻</span></div><div class="progress-row"><span>0:00</span><div class="progress"><span></span></div><span>—:—</span></div></div>-->
+<!--  <div class="player-extra" aria-hidden="true"><span class="hide-mobile">☷</span><span>▣</span><span>◖))</span><div class="volume"><span></span></div></div>-->
+<!--</footer>-->
+</div>
+
+<script>
+const DATA = {"genre": [{"genre": "pop", "streams": 95043}, {"genre": "rap", "streams": 76950}, {"genre": "latin", "streams": 58613}, {"genre": "rock", "streams": 56822}, {"genre": "r&b", "streams": 51199}, {"genre": "edm", "streams": 33491}], "daily": [{"date": "2020-11-02", "streams": 6563}, {"date": "2020-11-03", "streams": 7079}, {"date": "2020-11-04", "streams": 4875}, {"date": "2020-11-05", "streams": 5117}, {"date": "2020-11-06", "streams": 6470}, {"date": "2020-11-07", "streams": 5734}, {"date": "2020-11-08", "streams": 6438}, {"date": "2020-11-09", "streams": 5550}, {"date": "2020-11-10", "streams": 6662}, {"date": "2020-11-11", "streams": 7281}, {"date": "2020-11-12", "streams": 5305}, {"date": "2020-11-13", "streams": 7315}, {"date": "2020-11-14", "streams": 6587}, {"date": "2020-11-15", "streams": 5300}, {"date": "2020-11-16", "streams": 6037}, {"date": "2020-11-17", "streams": 4997}, {"date": "2020-11-18", "streams": 5167}, {"date": "2020-11-19", "streams": 6424}, {"date": "2020-11-20", "streams": 5585}, {"date": "2020-11-21", "streams": 7254}, {"date": "2020-11-22", "streams": 6228}, {"date": "2020-11-23", "streams": 5535}, {"date": "2020-11-24", "streams": 5641}, {"date": "2020-11-25", "streams": 6580}, {"date": "2020-11-26", "streams": 5642}, {"date": "2020-11-27", "streams": 6418}, {"date": "2020-11-28", "streams": 6729}, {"date": "2020-11-29", "streams": 5047}, {"date": "2020-11-30", "streams": 6343}, {"date": "2020-12-01", "streams": 4782}, {"date": "2020-12-02", "streams": 6107}, {"date": "2020-12-03", "streams": 7152}, {"date": "2020-12-04", "streams": 7014}, {"date": "2020-12-05", "streams": 5757}, {"date": "2020-12-06", "streams": 7207}, {"date": "2020-12-07", "streams": 7322}, {"date": "2020-12-08", "streams": 6337}, {"date": "2020-12-09", "streams": 5428}, {"date": "2020-12-10", "streams": 5380}, {"date": "2020-12-11", "streams": 7078}, {"date": "2020-12-12", "streams": 5247}, {"date": "2020-12-13", "streams": 6514}, {"date": "2020-12-14", "streams": 5855}, {"date": "2020-12-15", "streams": 7456}, {"date": "2020-12-16", "streams": 6859}, {"date": "2020-12-17", "streams": 6220}, {"date": "2020-12-18", "streams": 5775}, {"date": "2020-12-19", "streams": 7390}, {"date": "2020-12-20", "streams": 5841}, {"date": "2020-12-21", "streams": 6584}, {"date": "2020-12-22", "streams": 6909}, {"date": "2020-12-23", "streams": 7493}, {"date": "2020-12-24", "streams": 7604}, {"date": "2020-12-25", "streams": 6960}, {"date": "2020-12-26", "streams": 4959}, {"date": "2020-12-27", "streams": 6584}, {"date": "2020-12-28", "streams": 4846}, {"date": "2020-12-29", "streams": 6310}, {"date": "2020-12-30", "streams": 4655}, {"date": "2020-12-31", "streams": 6590}], "tier": [{"tier": "Family", "users": 505, "streams": 47291}, {"tier": "Free", "users": 1793, "streams": 166131}, {"tier": "Premium", "users": 1407, "streams": 129526}, {"tier": "Student", "users": 295, "streams": 29170}], "mood": [{"mood": "Angry/Tense", "streams": 132064}, {"mood": "Calm/Positive", "streams": 20136}, {"mood": "Happy/Energetic", "streams": 176169}, {"mood": "Sad/Melancholic", "streams": 43749}], "artists": [{"artist": "Queen", "streams": 1520.0}, {"artist": "David Guetta", "streams": 1484.0}, {"artist": "Drake", "streams": 1475.0}, {"artist": "Billie Eilish", "streams": 1409.0}, {"artist": "Martin Garrix", "streams": 1391.0}, {"artist": "The Chainsmokers", "streams": 1266.0}, {"artist": "Ed Sheeran", "streams": 1220.0}, {"artist": "Ariana Grande", "streams": 1213.0}, {"artist": "Khalid", "streams": 1197.0}, {"artist": "The Weeknd", "streams": 1182.0}, {"artist": "Ozuna", "streams": 1180.0}, {"artist": "Kygo", "streams": 1147.0}, {"artist": "Bad Bunny", "streams": 1101.0}, {"artist": "Daddy Yankee", "streams": 1097.0}, {"artist": "J Balvin", "streams": 1082.0}], "genre_dow": [{"genre": "edm", "day": "Friday", "streams": 4677}, {"genre": "edm", "day": "Monday", "streams": 4897}, {"genre": "edm", "day": "Saturday", "streams": 4410}, {"genre": "edm", "day": "Sunday", "streams": 4543}, {"genre": "edm", "day": "Thursday", "streams": 4981}, {"genre": "edm", "day": "Tuesday", "streams": 5002}, {"genre": "edm", "day": "Wednesday", "streams": 4981}, {"genre": "latin", "day": "Friday", "streams": 8316}, {"genre": "latin", "day": "Monday", "streams": 8742}, {"genre": "latin", "day": "Saturday", "streams": 7798}, {"genre": "latin", "day": "Sunday", "streams": 7664}, {"genre": "latin", "day": "Thursday", "streams": 8680}, {"genre": "latin", "day": "Tuesday", "streams": 8815}, {"genre": "latin", "day": "Wednesday", "streams": 8598}, {"genre": "pop", "day": "Friday", "streams": 13403}, {"genre": "pop", "day": "Monday", "streams": 13874}, {"genre": "pop", "day": "Saturday", "streams": 12576}, {"genre": "pop", "day": "Sunday", "streams": 12593}, {"genre": "pop", "day": "Thursday", "streams": 14248}, {"genre": "pop", "day": "Tuesday", "streams": 14314}, {"genre": "pop", "day": "Wednesday", "streams": 14035}, {"genre": "r&b", "day": "Friday", "streams": 7256}, {"genre": "r&b", "day": "Monday", "streams": 7575}, {"genre": "r&b", "day": "Saturday", "streams": 6972}, {"genre": "r&b", "day": "Sunday", "streams": 6683}, {"genre": "r&b", "day": "Thursday", "streams": 7573}, {"genre": "r&b", "day": "Tuesday", "streams": 7706}, {"genre": "r&b", "day": "Wednesday", "streams": 7434}, {"genre": "rap", "day": "Friday", "streams": 10948}, {"genre": "rap", "day": "Monday", "streams": 11224}, {"genre": "rap", "day": "Saturday", "streams": 10264}, {"genre": "rap", "day": "Sunday", "streams": 10157}, {"genre": "rap", "day": "Thursday", "streams": 11375}, {"genre": "rap", "day": "Tuesday", "streams": 11753}, {"genre": "rap", "day": "Wednesday", "streams": 11229}, {"genre": "rock", "day": "Friday", "streams": 8015}, {"genre": "rock", "day": "Monday", "streams": 8323}, {"genre": "rock", "day": "Saturday", "streams": 7637}, {"genre": "rock", "day": "Sunday", "streams": 7519}, {"genre": "rock", "day": "Thursday", "streams": 8577}, {"genre": "rock", "day": "Tuesday", "streams": 8583}, {"genre": "rock", "day": "Wednesday", "streams": 8168}]};
+const gridColor = '#343434';
+const textColor = '#b3b3b3';
+Chart.defaults.color = textColor;
+Chart.defaults.borderColor = gridColor;
+const palette = ['#1DB954','#1ed760','#4d9de0','#e15554','#e1b12c','#7b61ff','#ff8fab'];
+
+function kpi(val,lbl){ return `<div class="kpi"><div class="val">${val}</div><div class="lbl">${lbl}</div></div>`; }
+const totalStreams = DATA.genre.reduce((a,b)=>a+b.streams,0);
+const totalUsers = DATA.tier.reduce((a,b)=>a+b.users,0);
+document.getElementById('kpis').innerHTML =
+  kpi(totalStreams.toLocaleString(),'Total Streams (60d)') +
+  kpi(totalUsers.toLocaleString(),'Active Users') +
+  kpi(DATA.genre.length,'Genres Tracked') +
+  kpi(DATA.artists.length,'Artists (top shown)');
+
+const gSel = document.getElementById('genreFilter');
+DATA.genre.forEach(g=>{ const o=document.createElement('option'); o.value=g.genre; o.textContent=g.genre; gSel.appendChild(o); });
+const tSel = document.getElementById('tierFilter');
+DATA.tier.forEach(t=>{ const o=document.createElement('option'); o.value=t.tier; o.textContent=t.tier; tSel.appendChild(o); });
+
+new Chart(document.getElementById('dailyChart'), {
+  type:'line',
+  data:{ labels: DATA.daily.map(d=>d.date), datasets:[{ label:'Streams', data: DATA.daily.map(d=>d.streams),
+    borderColor: palette[0], backgroundColor:'rgba(29,185,84,0.15)', fill:true, tension:.25, pointRadius:0 }] },
+  options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{ticks:{maxTicksLimit:8},grid:{display:false}},y:{grid:{color:gridColor}}} }
+});
+
+const genreChart = new Chart(document.getElementById('genreChart'), {
+  type:'bar',
+  data:{ labels: DATA.genre.map(g=>g.genre), datasets:[{ label:'Streams', data: DATA.genre.map(g=>g.streams), backgroundColor: palette }] },
+  options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:gridColor}}} }
+});
+
+new Chart(document.getElementById('moodChart'), {
+  type:'doughnut',
+  data:{ labels: DATA.mood.map(m=>m.mood), datasets:[{ data: DATA.mood.map(m=>m.streams), backgroundColor: palette }] },
+  options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{color:textColor,padding:14,usePointStyle:true}}} }
+});
+
+const tierChart = new Chart(document.getElementById('tierChart'), {
+  type:'bar',
+  data:{ labels: DATA.tier.map(t=>t.tier), datasets:[
+    { label:'Streams', data: DATA.tier.map(t=>t.streams), backgroundColor: palette[0] },
+    { label:'Users', data: DATA.tier.map(t=>t.users), backgroundColor: palette[2], yAxisID:'y1' }
+  ]},
+  options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:textColor,usePointStyle:true}}},scales:{ x:{grid:{display:false}},y:{position:'left',grid:{color:gridColor}}, y1:{position:'right', grid:{drawOnChartArea:false}} } }
+});
+
+new Chart(document.getElementById('artistChart'), {
+  type:'bar',
+  data:{ labels: DATA.artists.map(a=>a.artist), datasets:[{ label:'Weighted Streams', data: DATA.artists.map(a=>a.streams), backgroundColor: palette[3] }] },
+  options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},scales:{x:{grid:{color:gridColor}},y:{grid:{display:false}}} }
+});
+
+const dowOrder = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const genresList = [...new Set(DATA.genre_dow.map(d=>d.genre))];
+const dowDatasets = genresList.map((g,i)=>({
+  label:g,
+  data: dowOrder.map(day => (DATA.genre_dow.find(d=>d.genre===g && d.day===day)||{}).streams || 0),
+  backgroundColor: palette[i % palette.length]
+}));
+new Chart(document.getElementById('dowChart'), {
+  type:'bar',
+  data:{ labels: dowOrder, datasets: dowDatasets },
+  options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:textColor,usePointStyle:true}}}, scales:{ x:{stacked:true,grid:{display:false}}, y:{stacked:true,grid:{color:gridColor}} } }
+});
+
+// Genre filter -> highlight bar in genre chart + filter DOW chart datasets visibility
+gSel.addEventListener('change', ()=>{
+  const v = gSel.value;
+  genreChart.data.datasets[0].backgroundColor = DATA.genre.map(g => v==='ALL'||g.genre===v ? palette[0] : gridColor);
+  genreChart.update();
+  dowDatasets.forEach((ds,i)=>{ dowChart_instance.setDatasetVisibility(i, v==='ALL' || genresList[i]===v); });
+  dowChart_instance.update();
+});
+const dowChart_instance = Chart.getChart('dowChart');
+
+tSel.addEventListener('change', ()=>{
+  const v = tSel.value;
+  tierChart.data.datasets.forEach(ds=>{});
+  tierChart.data.labels.forEach((l,i)=>{});
+  const bg = DATA.tier.map(t => v==='ALL'||t.tier===v ? palette[0] : gridColor);
+  tierChart.data.datasets[0].backgroundColor = bg;
+  tierChart.update();
+});
+
+function fillMlTable(id, rows, columns){
+  const body = document.getElementById(id);
+  body.replaceChildren();
+  rows.forEach(row=>{
+    const tr = document.createElement('tr');
+    columns.forEach(column=>{
+      const td = document.createElement('td');
+      td.textContent = column.format ? column.format(row[column.key]) : (row[column.key] ?? '—');
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+}
+
+const numberFmt = value => Number(value || 0).toLocaleString(undefined,{maximumFractionDigits:1});
+async function readJsonResponse(response){
+  const contentType = response.headers.get('content-type') || '';
+  if(!contentType.toLowerCase().includes('application/json')){
+    throw new Error('The sign-in service is unavailable. Restart the dashboard server and try again.');
+  }
+  return response.json();
+}
+async function loadMlInsights(){
+  const status = document.getElementById('mlStatus');
+  try{
+    const response = await fetch('/api/ml-results.json', {cache:'no-store'});
+    if(!response.ok) throw new Error(response.status === 404 ? 'not found' : `HTTP ${response.status}`);
+    const ml = await readJsonResponse(response);
+    const clusters = ml.user_clusters || [];
+    const trends = ml.top_trending_predicted || [];
+    const rec = ml.hybrid_recommendation_example || {};
+    const recommendations = rec.recommendations || [];
+
+    document.getElementById('mlKpis').innerHTML =
+      kpi(`${(Number(ml.mood_classifier_accuracy || 0)*100).toFixed(1)}%`,'Mood Classifier Accuracy') +
+      kpi(Number(ml.trend_model_r2 || 0).toFixed(3),'Trend Model R²') +
+      kpi(clusters.length,'Listener Segments') +
+      kpi(trends.length,'Trending Candidates');
+
+    fillMlTable('clusterRows',clusters,[
+      {key:'cluster',format:value=>`Cluster ${value}`},
+      {key:'total_plays',format:numberFmt},
+      {key:'avg_energy',format:value=>Number(value || 0).toFixed(3)},
+      {key:'avg_dance',format:value=>Number(value || 0).toFixed(3)},
+      {key:'skip_rate',format:value=>`${(Number(value || 0)*100).toFixed(1)}%`}
+    ]);
+    fillMlTable('trendingRows',trends,[
+      {key:'track_name'},
+      {key:'streams',format:numberFmt},
+      {key:'predicted_next',format:numberFmt},
+      {key:'predicted_growth',format:value=>`${Number(value || 0)>0?'+':''}${numberFmt(value)}`}
+    ]);
+    document.getElementById('recommendationSeed').textContent = rec.seed_song ? `Because you listened to ${rec.seed_song}` : '';
+    fillMlTable('recommendationRows',recommendations,[
+      {key:'track_name'},
+      {key:'score',format:value=>Number(value || 0).toFixed(3)}
+    ]);
+
+    const temporal = ml.temporal_dow_totals || {};
+    new Chart(document.getElementById('mlDowChart'),{
+      type:'bar',
+      data:{labels:dowOrder,datasets:[{label:'Streams',data:dowOrder.map(day=>Number(temporal[day] || 0)),backgroundColor:palette[0]}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:gridColor}}}}
+    });
+    status.textContent = 'Showing results from the latest ML run.';
+  }catch(error){
+    status.textContent = error.message === 'not found'
+      ? 'No ML results yet. Run `python ml/run_ml.py` from the project directory, then refresh this page.'
+      : `Could not load ML results (${error.message}).`;
+  }
+}
+loadMlInsights();
+
+const loginForm = document.getElementById('loginForm');
+const loginMessage = document.getElementById('loginMessage');
+const personalized = document.getElementById('personalized');
+function setLoginState(username){
+  const loggedIn = Boolean(username);
+  document.body.classList.toggle('logged-out',!loggedIn);
+  loginForm.hidden = loggedIn;
+  document.getElementById('loggedInPill').hidden = !loggedIn;
+  document.getElementById('logoutButton').hidden = !loggedIn;
+  personalized.hidden = !loggedIn;
+  if(loggedIn){
+    document.getElementById('loggedInName').textContent = username;
+    document.getElementById('personalTitle').textContent = `Picked for ${username}`;
+    loadPersonalRecommendations();
+  }
+}
+function addRecommendationRows(elementId, rows, kind){
+  const list = document.getElementById(elementId);
+  list.replaceChildren();
+  if(!rows || rows.length === 0){
+    const empty = document.createElement('li');
+    empty.className = 'recommendation-empty';
+    empty.textContent = 'No recommendations available yet.';
+    list.appendChild(empty);
+    return;
+  }
+  rows.forEach(item=>{
+    const li = document.createElement('li');
+    const copy = document.createElement('div'); copy.className = 'recommendation-main';
+    const title = document.createElement('b'); title.textContent = kind === 'song' ? item.track_name : item.name;
+    copy.appendChild(title);
+    const detail = document.createElement('span');
+    detail.textContent = kind === 'song' ? `${(item.artists || []).join(', ') || 'Unknown artist'} · ${item.album_name || 'Unknown album'}` : `${Number(item.score || 0).toFixed(3)} recommendation score`;
+    copy.appendChild(detail);
+    li.appendChild(copy);
+    if(kind === 'song'){
+      const score = document.createElement('span'); score.className = 'rec-score'; score.textContent = Number(item.score || 0).toFixed(3);
+      li.appendChild(score);
+    }
+    list.appendChild(li);
+  });
+}
+async function loadPersonalRecommendations(){
+  loginMessage.classList.remove('error');
+  loginMessage.textContent = 'Building recommendations from your listening history…';
+  try{
+    const response = await fetch('/api/recommendations', {cache:'no-store'});
+    const payload = await readJsonResponse(response);
+    if(!response.ok) throw new Error(payload.error || 'Recommendations could not be loaded.');
+    addRecommendationRows('personalSongs',payload.songs,'song');
+    addRecommendationRows('personalAlbums',payload.albums,'album');
+    addRecommendationRows('personalArtists',payload.artists,'artist');
+    document.getElementById('modelBadge').textContent = 'Hybrid ML';
+    loginMessage.textContent = '';
+  }catch(error){
+    loginMessage.classList.add('error');
+    loginMessage.textContent = error.message;
+  }
+}
+loginForm.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const button = loginForm.querySelector('button'); button.disabled = true; button.textContent = 'Signing in…';
+  loginMessage.classList.remove('error'); loginMessage.textContent = '';
+  try{
+    const response = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('usernameInput').value,password:document.getElementById('passwordInput').value})});
+    const payload = await readJsonResponse(response);
+    if(!response.ok) throw new Error(payload.error || 'Login failed.');
+    loginForm.reset(); setLoginState(payload.username);
+  }catch(error){loginMessage.classList.add('error');loginMessage.textContent=error.message;}
+  finally{button.disabled=false;button.textContent='Log in';}
+});
+document.getElementById('logoutButton').addEventListener('click',async()=>{
+  await fetch('/api/logout',{method:'POST'});
+  personalized.hidden=true; loginMessage.textContent='You are logged out. Public ML analytics remain available.';
+  setLoginState(null);
+});
+fetch('/api/session',{cache:'no-store'}).then(readJsonResponse).then(state=>setLoginState(state.authenticated?state.username:null)).catch(error=>{loginMessage.classList.add('error');loginMessage.textContent=error.message;});
+</script>
+</body>
+</html>
