@@ -1,7 +1,7 @@
-"""Load catalog dimensions and the artist bridge into the warehouse.
+"""Load the Gold dimensional warehouse from the Silver catalog tables.
 
-Listening statistics are loaded separately from
-data/spotify_listening_stats.csv by etl/load_listening_stats.py.
+etl/prepare_medallion.py must materialize Bronze and Silver first. Listening
+statistics are loaded separately by etl/load_listening_stats.py.
 
 Run: python etl/load_dwh.py
 """
@@ -12,11 +12,10 @@ import numpy as np
 from sqlalchemy import create_engine, text
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from dq_rules import clean_and_validate, split_artists, row_hash
-from db_config import get_engine, PROJECT_ROOT
+from dq_rules import split_artists, row_hash
+from db_config import get_engine
 
 ENGINE = get_engine()
-RAW_CSV = str(PROJECT_ROOT / "data" / "spotify_songs.csv")
 SONG_TRACKED_COLS = ["mood_label","danceability","energy","key_signature","loudness","mode",
                       "speechiness","acousticness","instrumentalness","liveness","valence","tempo"]
 ARTIST_TRACKED_COLS = ["primary_genre","popularity_tier","followers_bucket"]
@@ -106,7 +105,14 @@ def scd2_upsert(engine, table, business_key_col, staging_df, tracked_cols, as_of
     return len(new_rows) - len(changed_keys), len(changed_keys), len(new_rows)
 
 def load_catalog_incrementally(n_batches=5):
-    raw = pd.read_csv(RAW_CSV)
+    with ENGINE.begin() as conn:
+        raw = pd.read_sql(text("SELECT * FROM silver.spotify_songs ORDER BY source_row_number"), conn)
+        silver_rejected = conn.execute(text("""
+            SELECT COUNT(*) FROM silver.dq_rejects
+            WHERE source_name = 'spotify_songs.csv'
+        """)).scalar_one()
+    if raw.empty:
+        raise ValueError("Silver catalog is empty. Run etl/prepare_medallion.py first.")
     idx_to_batch = {}
     shuffled_idx = raw.sample(frac=1, random_state=1).index.to_numpy()
     for i, chunk_idx in enumerate(np.array_split(shuffled_idx, n_batches)):
@@ -114,14 +120,13 @@ def load_catalog_incrementally(n_batches=5):
             idx_to_batch[idx] = i
     raw["batch_no"] = raw.index.map(idx_to_batch)
 
-    total_read = total_rejected = total_loaded = 0
+    total_read = total_loaded = 0
 
     for b in range(n_batches):
         batch_id = f"CATALOG_B{b+1}_{uuid.uuid4().hex[:6]}"
         chunk = raw[raw["batch_no"] == b].drop(columns=["batch_no"])
-        clean, rejects = clean_and_validate(chunk)
+        clean = chunk.copy()
         total_read += len(chunk)
-        total_rejected += len(rejects)
 
         as_of = pd.Timestamp("2018-01-01") + pd.Timedelta(days=b)  # simulate arrival day
 
@@ -172,20 +177,19 @@ def load_catalog_incrementally(n_batches=5):
                 INSERT INTO dwh.etl_batch_log(batch_id, source_name, started_at, finished_at,
                                                rows_read, rows_rejected, rows_loaded, status)
                 VALUES (:bid,'spotify_songs.csv', now(), now(), :r, :rej, :l, 'SUCCESS')
-            """), {"bid": batch_id, "r": len(chunk), "rej": len(rejects), "l": len(clean)})
-            if len(rejects):
-                rejects["batch_id"] = batch_id
-                rejects["source_table"] = "stg_spotify_songs"
-                rejects[["batch_id", "source_table", "natural_key", "rule_violated"]].to_sql(
-                    "dq_reject_log", conn, schema="dwh", if_exists="append", index=False)
-        print(f"[batch {b+1}/{n_batches}] read={len(chunk)} rejected={len(rejects)} loaded={len(clean)} "
+            """), {"bid": batch_id, "r": len(chunk), "rej": 0, "l": len(clean)})
+        print(f"[batch {b+1}/{n_batches}] Silver rows={len(chunk)} loaded={len(clean)} "
               f"| new_artists={n_new} changed_artists={n_chg}")
 
-    print(f"\nCATALOG LOAD TOTAL: read={total_read} rejected={total_rejected} loaded={total_loaded}")
+    print(f"\nGOLD CATALOG LOAD: silver_rows={total_read}, loaded={total_loaded}; "
+          f"rejected earlier in Silver={silver_rejected}")
 
 def build_bridge_song_artist():
-    raw = pd.read_csv(RAW_CSV)[["track_id", "track_artist"]].drop_duplicates("track_id")
     with ENGINE.begin() as conn:
+        raw = pd.read_sql(text("""
+            SELECT track_id, track_artist FROM silver.spotify_songs
+            ORDER BY source_row_number
+        """), conn).drop_duplicates("track_id")
         song_map = pd.read_sql(text("SELECT song_sk, song_bk FROM dwh.dim_song WHERE is_current"), conn)
         artist_map = pd.read_sql(text("SELECT artist_sk, artist_bk FROM dwh.dim_artist WHERE is_current"), conn)
     song_lookup = song_map.set_index("song_bk")["song_sk"].to_dict()

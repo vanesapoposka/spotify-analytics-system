@@ -141,7 +141,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             try:
                 with ENGINE.begin() as connection:
                     user = connection.execute(text("""
-                        SELECT user_sk, user_bk FROM dwh.dim_user
+                        SELECT user_sk, user_bk FROM gold.dim_user
                         WHERE user_bk = :username AND is_current = TRUE
                         ORDER BY version_no DESC LIMIT 1
                     """), {"username": username}).mappings().first()

@@ -2,100 +2,100 @@
   "user_clusters": [
     {
       "cluster": 0,
-      "listeners": 783,
-      "avg_valence": 0.525,
-      "avg_energy": 0.671,
-      "avg_dance": 0.665,
-      "total_plays": 74.677,
-      "skip_rate": 0.131,
-      "genre_diversity": 5.977
+      "listeners": 952,
+      "avg_valence": 0.521,
+      "avg_energy": 0.669,
+      "avg_dance": 0.663,
+      "total_plays": 69.905,
+      "skip_rate": 0.127,
+      "genre_diversity": 6.0
     },
     {
       "cluster": 1,
-      "listeners": 880,
-      "avg_valence": 0.501,
-      "avg_energy": 0.641,
-      "avg_dance": 0.672,
-      "total_plays": 74.357,
-      "skip_rate": 0.124,
-      "genre_diversity": 5.999
+      "listeners": 984,
+      "avg_valence": 0.521,
+      "avg_energy": 0.659,
+      "avg_dance": 0.675,
+      "total_plays": 172.774,
+      "skip_rate": 0.13,
+      "genre_diversity": 6.0
     },
     {
       "cluster": 2,
-      "listeners": 942,
-      "avg_valence": 0.522,
-      "avg_energy": 0.659,
-      "avg_dance": 0.675,
-      "total_plays": 173.757,
-      "skip_rate": 0.13,
-      "genre_diversity": 5.994
+      "listeners": 1018,
+      "avg_valence": 0.498,
+      "avg_energy": 0.639,
+      "avg_dance": 0.672,
+      "total_plays": 68.398,
+      "skip_rate": 0.128,
+      "genre_diversity": 6.0
     },
     {
       "cluster": 3,
-      "listeners": 746,
-      "avg_valence": 0.514,
-      "avg_energy": 0.652,
-      "avg_dance": 0.673,
-      "total_plays": 59.975,
-      "skip_rate": 0.128,
-      "genre_diversity": 4.985
+      "listeners": 76,
+      "avg_valence": 0.515,
+      "avg_energy": 0.653,
+      "avg_dance": 0.676,
+      "total_plays": 38.908,
+      "skip_rate": 0.133,
+      "genre_diversity": 4.974
     },
     {
       "cluster": 4,
-      "listeners": 649,
-      "avg_valence": 0.551,
-      "avg_energy": 0.67,
-      "avg_dance": 0.693,
-      "total_plays": 66.342,
-      "skip_rate": 0.131,
-      "genre_diversity": 5.871
+      "listeners": 970,
+      "avg_valence": 0.546,
+      "avg_energy": 0.667,
+      "avg_dance": 0.689,
+      "total_plays": 68.285,
+      "skip_rate": 0.13,
+      "genre_diversity": 6.0
     }
   ],
   "top_trending_predicted": [
     {
       "track_name": "Atrévete",
       "streams": 1,
-      "predicted_next": 4.27,
-      "predicted_growth": 3.27
+      "predicted_next": 4.16,
+      "predicted_growth": 3.16
+    },
+    {
+      "track_name": "Going Bad (feat. Drake)",
+      "streams": 2,
+      "predicted_next": 5.14,
+      "predicted_growth": 3.14
     },
     {
       "track_name": "Back In Black",
       "streams": 1,
-      "predicted_next": 4.23,
-      "predicted_growth": 3.23
+      "predicted_next": 4.13,
+      "predicted_growth": 3.13
     },
     {
       "track_name": "Take on Me",
       "streams": 1,
-      "predicted_next": 4.06,
-      "predicted_growth": 3.06
-    },
-    {
-      "track_name": "Perfect",
-      "streams": 1,
-      "predicted_next": 3.98,
-      "predicted_growth": 2.98
+      "predicted_next": 3.97,
+      "predicted_growth": 2.97
     },
     {
       "track_name": "Dancing With Your Ghost",
       "streams": 1,
-      "predicted_next": 3.97,
-      "predicted_growth": 2.97
+      "predicted_next": 3.93,
+      "predicted_growth": 2.93
     },
     {
       "track_name": "Who Says",
       "streams": 1,
-      "predicted_next": 3.97,
-      "predicted_growth": 2.97
+      "predicted_next": 3.93,
+      "predicted_growth": 2.93
+    },
+    {
+      "track_name": "Perfect",
+      "streams": 1,
+      "predicted_next": 3.93,
+      "predicted_growth": 2.93
     },
     {
       "track_name": "All Around The World (La La La)",
-      "streams": 1,
-      "predicted_next": 3.95,
-      "predicted_growth": 2.95
-    },
-    {
-      "track_name": "Beautiful People (feat. Khalid)",
       "streams": 1,
       "predicted_next": 3.91,
       "predicted_growth": 2.91
@@ -103,14 +103,14 @@
     {
       "track_name": "Born To Be Yours",
       "streams": 1,
-      "predicted_next": 3.91,
-      "predicted_growth": 2.91
+      "predicted_next": 3.81,
+      "predicted_growth": 2.81
     },
     {
-      "track_name": "Going Bad (feat. Drake)",
-      "streams": 2,
-      "predicted_next": 4.87,
-      "predicted_growth": 2.87
+      "track_name": "Beautiful People (feat. Khalid)",
+      "streams": 1,
+      "predicted_next": 3.81,
+      "predicted_growth": 2.81
     }
   ],
   "temporal_dow_totals": {

@@ -32,17 +32,17 @@ def _catalog_model():
                COALESCE(g.playlist_genre, 'Unknown') AS genre,
                COALESCE((
                    SELECT array_agg(DISTINCT ar.artist_name ORDER BY ar.artist_name)
-                   FROM dwh.bridge_song_artist b
-                   JOIN dwh.dim_artist ar ON ar.artist_sk = b.artist_sk
+                   FROM gold.bridge_song_artist b
+                   JOIN gold.dim_artist ar ON ar.artist_sk = b.artist_sk
                    WHERE b.song_sk = s.song_sk AND ar.is_current
                ), ARRAY[]::varchar[]) AS artists
-        FROM dwh.dim_song s
-        LEFT JOIN dwh.dim_genre g ON g.genre_sk = (
-            SELECT fs.genre_sk FROM dwh.fact_stream fs
+        FROM gold.dim_song s
+        LEFT JOIN gold.dim_genre g ON g.genre_sk = (
+            SELECT fs.genre_sk FROM gold.fact_stream fs
             WHERE fs.song_sk = s.song_sk ORDER BY fs.stream_count DESC LIMIT 1
         )
-        LEFT JOIN dwh.dim_album a ON a.album_sk = (
-            SELECT fs.album_sk FROM dwh.fact_stream fs
+        LEFT JOIN gold.dim_album a ON a.album_sk = (
+            SELECT fs.album_sk FROM gold.fact_stream fs
             WHERE fs.song_sk = s.song_sk GROUP BY fs.album_sk ORDER BY SUM(fs.stream_count) DESC LIMIT 1
         )
         WHERE s.is_current
@@ -63,7 +63,7 @@ def _collaborative_scores(user_sk: int) -> dict[int, float]:
     query = text("""
         WITH history AS (
             SELECT song_sk, SUM(stream_count)::float AS plays
-            FROM dwh.fact_stream
+            FROM gold.fact_stream
             WHERE user_sk = :user_sk
             GROUP BY song_sk
             ORDER BY plays DESC
@@ -73,7 +73,7 @@ def _collaborative_scores(user_sk: int) -> dict[int, float]:
             FROM history h
             JOIN (
                 SELECT user_sk, song_sk, SUM(stream_count) AS plays
-                FROM dwh.fact_stream GROUP BY user_sk, song_sk
+                FROM gold.fact_stream GROUP BY user_sk, song_sk
             ) other ON other.song_sk = h.song_sk
             WHERE other.user_sk <> :user_sk
             GROUP BY other.user_sk
@@ -81,7 +81,7 @@ def _collaborative_scores(user_sk: int) -> dict[int, float]:
             LIMIT 100
         ), neighbor_items AS (
             SELECT fs.user_sk, fs.song_sk, SUM(fs.stream_count)::float AS plays
-            FROM dwh.fact_stream fs
+            FROM gold.fact_stream fs
             JOIN neighbors n ON n.user_sk = fs.user_sk
             GROUP BY fs.user_sk, fs.song_sk
         )
@@ -103,8 +103,8 @@ def get_recommendations(user_sk: int, limit: int = 10) -> dict:
     songs, matrix, index_by_song = _catalog_model()
     history_query = text("""
         SELECT s.song_sk, SUM(fs.stream_count)::float AS plays
-        FROM dwh.fact_stream fs
-        JOIN dwh.dim_song s ON s.song_sk = fs.song_sk AND s.is_current
+        FROM gold.fact_stream fs
+        JOIN gold.dim_song s ON s.song_sk = fs.song_sk AND s.is_current
         WHERE fs.user_sk = :user_sk
         GROUP BY s.song_sk
         ORDER BY plays DESC
@@ -121,7 +121,7 @@ def get_recommendations(user_sk: int, limit: int = 10) -> dict:
         with ENGINE.begin() as connection:
             popular = pd.read_sql(text("""
                 SELECT song_sk, SUM(stream_count)::float AS plays
-                FROM dwh.fact_stream GROUP BY song_sk
+                FROM gold.fact_stream GROUP BY song_sk
                 ORDER BY plays DESC LIMIT 2500
             """), connection)
         collaborative = {int(row.song_sk): float(row.plays) for row in popular.itertuples(index=False)}
@@ -140,7 +140,7 @@ def get_recommendations(user_sk: int, limit: int = 10) -> dict:
         with ENGINE.begin() as connection:
             popular = pd.read_sql(text("""
                 SELECT song_sk, SUM(stream_count)::float AS plays
-                FROM dwh.fact_stream GROUP BY song_sk
+                FROM gold.fact_stream GROUP BY song_sk
                 ORDER BY plays DESC LIMIT 2500
             """), connection)
         collaborative = {int(row.song_sk): float(row.plays) for row in popular.itertuples(index=False)}
@@ -185,3 +185,4 @@ def get_recommendations(user_sk: int, limit: int = 10) -> dict:
                     sorted(artists.items(), key=lambda entry: entry[1], reverse=True)[:5]],
         "model": "hybrid collaborative filtering + audio-feature similarity",
     }
+

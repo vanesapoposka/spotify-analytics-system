@@ -151,3 +151,17 @@ CREATE TABLE dq_reject_log (
     raw_row                 JSONB,
     rejected_at               TIMESTAMP DEFAULT now()
 );
+
+-- GOLD: stable curated views over the dimensional warehouse. ETL owns dwh;
+-- analytics, ML, and application queries consume gold.
+CREATE VIEW gold.dim_date AS SELECT * FROM dwh.dim_date;
+CREATE VIEW gold.dim_artist AS SELECT * FROM dwh.dim_artist;
+CREATE VIEW gold.dim_song AS SELECT * FROM dwh.dim_song;
+CREATE VIEW gold.dim_album AS SELECT * FROM dwh.dim_album;
+CREATE VIEW gold.dim_genre AS SELECT * FROM dwh.dim_genre;
+CREATE VIEW gold.dim_user AS SELECT * FROM dwh.dim_user;
+CREATE VIEW gold.bridge_song_artist AS SELECT * FROM dwh.bridge_song_artist;
+CREATE VIEW gold.fact_stream AS SELECT * FROM dwh.fact_stream;
+CREATE VIEW gold.fact_song_artist_daily AS SELECT * FROM dwh.fact_song_artist_daily;
+CREATE VIEW gold.etl_batch_log AS SELECT * FROM dwh.etl_batch_log;
+CREATE VIEW gold.dq_reject_log AS SELECT * FROM dwh.dq_reject_log;

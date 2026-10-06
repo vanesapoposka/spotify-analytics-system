@@ -1,7 +1,7 @@
 """
-Data Quality layer: cleaning, deduplication, validation rules applied
-BEFORE anything is loaded into the warehouse. Every rejected row is logged
-with the rule it violated (dq_reject_log) instead of silently dropped.
+Silver-layer data quality: cleaning, deduplication, and validation are applied
+after raw source rows land in Bronze. Rejected rows and their reasons are
+preserved in silver.dq_rejects rather than silently discarded.
 """
 import pandas as pd
 import numpy as np
@@ -30,6 +30,7 @@ def clean_and_validate(df: pd.DataFrame):
         bad = df[df[col].isna() | (df[col].astype(str).str.strip() == "")]
         for _, r in bad.iterrows():
             rejects.append({"natural_key": r.get("track_id", "UNKNOWN"),
+                             "source_row_number": r.get("_source_row_number"),
                              "rule_violated": f"NULL_MANDATORY_FIELD:{col}"})
         df = df.drop(bad.index)
 
@@ -38,7 +39,9 @@ def clean_and_validate(df: pd.DataFrame):
     df = df.sort_values("_completeness", ascending=False)
     dup_mask = df.duplicated(subset=["track_id"], keep="first")
     for _, r in df[dup_mask].iterrows():
-        rejects.append({"natural_key": r["track_id"], "rule_violated": "DUPLICATE_TRACK_ID"})
+        rejects.append({"natural_key": r["track_id"],
+                         "source_row_number": r.get("_source_row_number"),
+                         "rule_violated": "DUPLICATE_TRACK_ID"})
     df = df[~dup_mask]
 
     # RULE 3: range validation on audio features
@@ -47,26 +50,35 @@ def clean_and_validate(df: pd.DataFrame):
             continue
         bad = df[(df[col] < lo) | (df[col] > hi) | df[col].isna()]
         for _, r in bad.iterrows():
-            rejects.append({"natural_key": r["track_id"], "rule_violated": f"OUT_OF_RANGE:{col}"})
+            rejects.append({"natural_key": r["track_id"],
+                             "source_row_number": r.get("_source_row_number"),
+                             "rule_violated": f"OUT_OF_RANGE:{col}"})
         df = df.drop(bad.index, errors="ignore")
 
     # RULE 4: popularity must be 0-100
-    bad = df[(df["track_popularity"] < 0) | (df["track_popularity"] > 100)]
+    bad = df[df["track_popularity"].isna() | (df["track_popularity"] < 0) |
+             (df["track_popularity"] > 100)]
     for _, r in bad.iterrows():
-        rejects.append({"natural_key": r["track_id"], "rule_violated": "OUT_OF_RANGE:popularity"})
+        rejects.append({"natural_key": r["track_id"],
+                         "source_row_number": r.get("_source_row_number"),
+                         "rule_violated": "OUT_OF_RANGE:popularity"})
     df = df.drop(bad.index, errors="ignore")
 
     # RULE 5: release date sanity (Spotify founded 2006; allow slack for pre-catalog reissues back to 1900)
     df["track_album_release_date"] = pd.to_datetime(df["track_album_release_date"], errors="coerce")
-    bad = df[df["track_album_release_date"].isna() | (df["track_album_release_date"].dt.year < 1900) |
+    missing_release = df["track_album_release_date"].isna()
+    df.loc[missing_release, "track_album_release_date"] = pd.Timestamp("1900-01-01")
+    bad = df[(df["track_album_release_date"].dt.year < 1900) |
              (df["track_album_release_date"] > pd.Timestamp.today())]
     for _, r in bad.iterrows():
-        rejects.append({"natural_key": r["track_id"], "rule_violated": "INVALID_RELEASE_DATE"})
-    df.loc[df["track_album_release_date"].isna(), "track_album_release_date"] = pd.Timestamp("1900-01-01")
+        rejects.append({"natural_key": r["track_id"],
+                         "source_row_number": r.get("_source_row_number"),
+                         "rule_violated": "INVALID_RELEASE_DATE"})
+    df = df.drop(bad.index, errors="ignore")
 
     # RULE 6: trim/normalize text fields
-    for col in ["track_name", "track_artist", "track_album_name"]:
-        df[col] = df[col].astype(str).str.strip()
+    for col in ["track_name", "track_artist", "track_album_name", "playlist_genre", "playlist_subgenre"]:
+        df[col] = df[col].fillna("").astype(str).str.strip()
 
     rejects_df = pd.DataFrame(rejects)
     df = df.drop(columns=["_orig_idx", "_completeness"], errors="ignore")

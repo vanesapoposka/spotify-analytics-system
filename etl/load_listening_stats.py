@@ -1,8 +1,8 @@
-"""Load the project's listening-statistics CSV into the warehouse.
+"""Load listening statistics from Silver into the Gold warehouse.
 
-The CSV is the source of listener profiles and daily (user, track) aggregates.
-This script does not generate listening events. It maps the CSV business keys
-to warehouse surrogate keys, loads demo users, and appends fact_stream rows.
+etl/prepare_medallion.py validates the source CSV and materializes
+silver.listening_stats. This loader maps its business keys to warehouse keys,
+loads demo users, and appends Gold fact_stream rows.
 
 Run after applying the schema and loading the Spotify catalog:
     python etl/load_listening_stats.py
@@ -14,10 +14,9 @@ import pandas as pd
 from sqlalchemy import text
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from db_config import get_engine, PROJECT_ROOT
+from db_config import get_engine
 
 ENGINE = get_engine()
-SOURCE_CSV = PROJECT_ROOT / "data" / "spotify_listening_stats.csv"
 BATCH_ID = "LISTEN_STATS_V1"
 REQUIRED_COLUMNS = {
     "listening_date", "user_id", "country", "age_bracket",
@@ -27,15 +26,20 @@ REQUIRED_COLUMNS = {
 
 
 def load_listening_stats():
-    if not SOURCE_CSV.is_file():
-        raise FileNotFoundError(f"Listening dataset not found: {SOURCE_CSV}")
-
-    stats = pd.read_csv(SOURCE_CSV, parse_dates=["listening_date"])
+    with ENGINE.begin() as conn:
+        stats = pd.read_sql(text("""
+            SELECT listening_date, user_id, country, age_bracket, subscription_tier,
+                   user_segment, track_id, stream_count, ms_played, skipped_count,
+                   completed_count
+            FROM silver.listening_stats
+            ORDER BY source_row_number
+        """), conn)
     missing = REQUIRED_COLUMNS - set(stats.columns)
     if missing:
         raise ValueError(f"Listening dataset is missing columns: {sorted(missing)}")
     if stats.empty:
-        raise ValueError("Listening dataset contains no rows")
+        raise ValueError("Silver listening data is empty. Run etl/prepare_medallion.py first.")
+    stats["listening_date"] = pd.to_datetime(stats["listening_date"], errors="raise")
 
     # The checked-in dataset is a fixed snapshot. The stable batch key makes
     # repeated manual/Airflow runs idempotent instead of duplicating facts.
@@ -44,7 +48,7 @@ def load_listening_stats():
             "SELECT 1 FROM dwh.etl_batch_log WHERE batch_id = :batch AND status = 'SUCCESS'"
         ), {"batch": BATCH_ID}).first()
     if already_loaded:
-        print(f"[fact_stream] {SOURCE_CSV.name} is already loaded (batch {BATCH_ID}); skipping")
+        print(f"[fact_stream] Silver listening snapshot is already loaded (batch {BATCH_ID}); skipping")
         return
 
     for col in ("stream_count", "ms_played", "skipped_count", "completed_count"):
@@ -78,13 +82,14 @@ def load_listening_stats():
             text("SELECT song_sk, song_bk FROM dwh.dim_song WHERE is_current"), conn)
         album_map = pd.read_sql(text("SELECT album_sk, album_bk FROM dwh.dim_album"), conn)
         genre_map = pd.read_sql(text("SELECT genre_sk, genre_bk FROM dwh.dim_genre"), conn)
-    # Catalog foreign keys are resolved from the original catalog, whose IDs
-    # are the same keys represented in the dimensions.
-    catalog = pd.read_csv(PROJECT_ROOT / "data" / "spotify_songs.csv", usecols=[
-        "track_id", "track_album_id", "playlist_genre", "playlist_subgenre"]
-    ).drop_duplicates("track_id")
+    # Resolve catalog business keys using the validated Silver catalog.
+    with ENGINE.begin() as conn:
+        catalog = pd.read_sql(text("""
+            SELECT track_id AS song_bk, track_album_id AS album_bk,
+                   playlist_genre, playlist_subgenre
+            FROM silver.spotify_songs
+        """), conn)
     catalog["genre_bk"] = catalog["playlist_genre"].fillna("") + "|" + catalog["playlist_subgenre"].fillna("")
-    catalog = catalog.rename(columns={"track_id": "song_bk", "track_album_id": "album_bk"})
     song_refs = catalog.merge(album_map, on="album_bk", how="left").merge(genre_map, on="genre_bk", how="left")
 
     facts = (stats.rename(columns={"user_id": "user_bk", "track_id": "song_bk"})
@@ -121,7 +126,7 @@ def load_listening_stats():
     print(f"[dim_user] available profiles: {len(user_profiles)} ({len(new_users)} newly loaded)")
     if removed_legacy_rows:
         print(f"[fact_stream] replaced {removed_legacy_rows} rows from the former generator")
-    print(f"[fact_stream] loaded {fact_count} rows from {SOURCE_CSV.name} as batch {BATCH_ID}")
+    print(f"[fact_stream] loaded {fact_count} validated Silver rows as batch {BATCH_ID}")
 
 
 if __name__ == "__main__":

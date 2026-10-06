@@ -36,9 +36,9 @@ with ENGINE.begin() as conn:
                SUM(fs.skipped_count)::float /
                    NULLIF(SUM(fs.stream_count + fs.skipped_count), 0) AS skip_rate,
                COUNT(DISTINCT dg.playlist_genre) AS genre_diversity
-        FROM dwh.fact_stream fs
-        JOIN dwh.dim_song ds ON ds.song_sk = fs.song_sk
-        JOIN dwh.dim_genre dg ON dg.genre_sk = fs.genre_sk
+        FROM gold.fact_stream fs
+        JOIN gold.dim_song ds ON ds.song_sk = fs.song_sk
+        JOIN gold.dim_genre dg ON dg.genre_sk = fs.genre_sk
         GROUP BY fs.user_sk
     """), conn)
 
@@ -66,12 +66,12 @@ print("=== LISTENER CLUSTERS ===\n", cluster_profiles.to_string(index=False), "\
 with ENGINE.begin() as conn:
     daily = pd.read_sql(text("""
         SELECT fs.song_sk, fs.date_key, SUM(fs.stream_count) AS streams
-        FROM dwh.fact_stream fs
+        FROM gold.fact_stream fs
         GROUP BY fs.song_sk, fs.date_key
     """), conn)
     song_names = pd.read_sql(text("""
         SELECT song_sk, track_name
-        FROM dwh.dim_song
+        FROM gold.dim_song
         WHERE is_current = TRUE
     """), conn)
 
@@ -106,8 +106,8 @@ print("=== TOP PREDICTED TRENDING SONGS ===\n", trending.to_string(index=False),
 with ENGINE.begin() as conn:
     weekday_totals = pd.read_sql(text("""
         SELECT dd.day_name, SUM(fs.stream_count) AS streams
-        FROM dwh.fact_stream fs
-        JOIN dwh.dim_date dd ON dd.date_key = fs.date_key
+        FROM gold.fact_stream fs
+        JOIN gold.dim_date dd ON dd.date_key = fs.date_key
         GROUP BY dd.day_of_week, dd.day_name
         ORDER BY dd.day_of_week
     """), conn)

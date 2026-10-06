@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Spotify Analytics DWH — one-command setup.
-# Starts Postgres (Docker), applies the schema, loads the datasets, derives
-# metrics, and runs
-# the ML layer. Safe to re-run: it always rebuilds the warehouse from scratch.
+# Starts Postgres, rebuilds Bronze/Silver/Gold schemas, loads the datasets,
+# derives metrics, and runs the ML layer from scratch.
 # ==============================================================================
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -31,15 +30,18 @@ source .venv/bin/activate
 pip install -q --upgrade pip
 pip install -q -r requirements.txt
 
-echo "== 4/7  Applying star-schema DDL =="
+echo "== 4/7  Applying medallion and warehouse DDL =="
+docker compose exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -f /sql/00_medallion_layers.sql
 docker compose exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -f /sql/01_star_schema.sql
 
-echo "== 5/7  Running incremental ETL (catalog load + SCD2 + bridge table) =="
-python3 etl/load_dwh.py
+echo "== 5/7  Ingesting Bronze and preparing validated Silver data =="
+python3 etl/prepare_medallion.py
 
-echo "== 6/7  Loading listening statistics from CSV =="
+echo "== 6/7  Loading Gold dimensions and listening facts =="
+python3 etl/load_dwh.py
 python3 etl/load_listening_stats.py
 docker compose exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -f /sql/02_derive_weighted_metrics.sql
+docker compose exec -T postgres psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -f /sql/03_olap_queries.sql
 
 echo "== 7/7  Running ML layer (listener clustering, trend prediction, weekday streams) =="
 python3 ml/run_ml.py
@@ -47,6 +49,6 @@ python3 ml/run_ml.py
 echo ""
 echo "=============================================================="
 echo " Setup complete. Verify with:"
-echo "   docker compose exec postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c \"SELECT count(*) FROM dwh.fact_stream;\""
+echo "   docker compose exec postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c \"SELECT count(*) FROM gold.fact_stream;\""
 echo " Dashboard: open dashboard/spotify_dashboard.html in a browser"
 echo "=============================================================="

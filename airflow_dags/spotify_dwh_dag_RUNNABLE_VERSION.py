@@ -1,5 +1,5 @@
 """
-Airflow DAG — Spotify Analytics DWH pipeline (REAL, RUNNABLE VERSION).
+Airflow DAG — Spotify Analytics Medallion + Gold pipeline.
 
 This is the executable counterpart to the production DAG design
 (spotify_dwh/airflow_dags/spotify_dwh_dag.py). It's wired directly to the
@@ -23,7 +23,7 @@ default_args = {
 
 with DAG(
     dag_id="spotify_dwh_daily",
-    description="Manual full rebuild: star schema, CSV listening stats, OLAP, and ML refresh",
+    description="Manual full rebuild: Bronze/Silver ingestion, Gold warehouse, OLAP, and ML refresh",
     default_args=default_args,
     schedule_interval=None,
     start_date=datetime(2024, 1, 1),
@@ -35,8 +35,15 @@ with DAG(
     PSQL = f"PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER -d $POSTGRES_DB"
 
     apply_schema = BashOperator(
-        task_id="apply_star_schema_ddl",
-        bash_command=f"set -a; source {PROJECT}/.env; set +a; {PSQL} -f {PROJECT}/sql/01_star_schema.sql",
+        task_id="apply_medallion_and_warehouse_ddl",
+        bash_command=(f"set -a; source {PROJECT}/.env; set +a; "
+                      f"{PSQL} -f {PROJECT}/sql/00_medallion_layers.sql && "
+                      f"{PSQL} -f {PROJECT}/sql/01_star_schema.sql"),
+    )
+
+    prepare_medallion = BashOperator(
+        task_id="ingest_bronze_and_prepare_silver",
+        bash_command=f"python3 {PROJECT}/etl/prepare_medallion.py",
     )
 
     load_dims_and_catalog = BashOperator(
@@ -64,5 +71,6 @@ with DAG(
         bash_command=f"python3 {PROJECT}/ml/run_ml.py",
     )
 
-    (apply_schema >> load_dims_and_catalog >> load_events
+    (apply_schema >> prepare_medallion >> load_dims_and_catalog >> load_events
         >> derive_weighted_metrics >> run_olap_queries >> run_ml_pipeline)
+
